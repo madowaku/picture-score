@@ -1,0 +1,54 @@
+/* A sunlit box of color pencils. Geometry and musical meaning stay in the drawing. */
+:root { background: #fff8e9; --accent: #cc4960; --accent-dark: #a63348; --paper: #fffef9; }
+body { background: radial-gradient(ellipse at 0 5%, #ffe0c688, transparent 38%), radial-gradient(ellipse at 100% 35%, #ceebe477, transparent 40%), #fff8e9; }
+.intro h1 em { color: #ce4e68; text-decoration: underline; text-decoration-color: #f3c950; text-decoration-thickness: 6px; text-underline-offset: 9px; }
+.intro .eyebrow { color: #985231; }
+.intro-note { color: #327c8c; transform: rotate(-5deg); }
+.space-nav { background: #fffdf4; border: 1px solid #e9dfc9; border-radius: 30px; padding: 4px; box-shadow: 0 3px 0 #e9dfc955; }
+.space-nav button[aria-pressed="true"] { background: #f8c954; color: #493d22; }
+.space-nav button:nth-child(2)[aria-pressed="true"] { background: #b9e5cd; color: #235f49; }
+.creation-trail li > span { display: grid; place-items: center; flex: 0 0 30px; height: 30px; border-radius: 50% 45% 48% 40%; color: #8e3b4d; background: #fbd6df; font: 700 12px "M PLUS Rounded 1c", sans-serif; }
+.creation-trail li:nth-child(2) > span { background: #cdeaf4; color: #286482; transform: rotate(7deg); }
+.creation-trail li:nth-child(3) > span { background: #d6edc2; color: #4c7036; transform: rotate(-6deg); }
+.score-paper { border-color: #eadac0; box-shadow: 0 5px 0 #eadac05c, 0 14px 38px #9f76550c; }
+.paper-heading { background: #fff8df; }
+.source-strokes { opacity: .72; }
+.source-strokes path { stroke-width: 2; }
+.note-head { fill: var(--note-color, #d44f65); }
+.note-stem { stroke: var(--note-color, #d44f65); }
+.tool-switch .selected { background: #d8edf3; color: #24627b; }
+.play-button { background: #d44f65; box-shadow: 0 4px 0 #aa3549; border-radius: 18px; }
+.play-button:hover:not(:disabled) { background: #c84259; }
+.inspiration button:nth-of-type(1) { color: #b63f59; background: #ffedf0; }
+.inspiration button:nth-of-type(2) { color: #26769a; background: #e6f4fb; }
+.inspiration button:nth-of-type(3) { color: #926423; background: #fff1d2; }
+.inspiration button { border-radius: 14px; padding: 7px 10px; }
+.wonder-hint { min-height: 18px; display: inline-block; font-size: 11px; color: #786031; letter-spacing: .04em; pointer-events: none; }
+.wonder-draw-layer { pointer-events: none; }
+.wonder-mark { fill: none; stroke: #e2a52c; stroke-width: 5; stroke-linejoin: round; stroke-linecap: round; opacity: .55; animation: wonder-ink 850ms ease-out both; }
+.wonder-mark path { vector-effect: non-scaling-stroke; }
+.wonder-mark.retrace-thicken { stroke: #d55483; stroke-width: 6; }
+.wonder-mark.mirror-answer { stroke: #6c83c8; stroke-width: 3; }
+.wonder-mark.crossing-spark { stroke: #d7971c; stroke-width: 3; }
+.wonder-mark.closed-loop { transform-box: fill-box; transform-origin: center; animation: wonder-close 700ms ease-out both; }
+@keyframes wonder-ink { 0% { opacity: .8; } 100% { opacity: 0; } }
+@keyframes wonder-close { 0% { transform: scale(.975); opacity: .8; } 30% { transform: scale(1.012); } 100% { transform: scale(1); opacity: 0; } }
+.garden-intro h1 em { color: #318469; }
+.garden-toolbar { background: #edf7e7; border-color: #cbdcbd; }
+.garden-listen { background: #328264; border-radius: 14px; box-shadow: 0 3px 0 #24664d; }
+.garden-field { border-color: #cbdcbd; background: radial-gradient(ellipse at 82% 20%,#cceaf2 0,transparent 44%),radial-gradient(ellipse at 12% 80%,#e2edaa 0,transparent 42%),radial-gradient(ellipse at 52% 50%,#ffe8b3 0,transparent 48%),#f1f8dd; }
+.garden-landscape path { stroke: #e6d6a2; stroke-width: 20; opacity: .35; }
+.garden-landscape ellipse { fill: #b5ded566; stroke: #a3cbb466; }
+.garden-artwork, .garden-artwork.audible { color: var(--art-color, #d44f65); }
+.garden-artwork.chosen { outline: 2px dashed var(--art-color, #d44f65); background: #fffef970; }
+.garden-artwork.wonder-leading { background: #fffdf3bf; box-shadow: 0 0 0 5px #fffdf35c, 0 5px 18px #52774d20; }
+.wonder-garden-layer { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.wonder-garden-layer path { fill: none; stroke: #d29229; stroke-width: 2; stroke-dasharray: 2 9; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.wonder-garden-layer [data-wonder="garden-triad-round"] path { stroke: #7b6fc1; }
+.wonder-traveller { fill: #fff8d744; stroke: #d59d28; stroke-width: 3; vector-effect: non-scaling-stroke; transition: cx .25s ease, cy .25s ease; }
+.garden-view > .wonder-hint { display: block; margin: 4px 0 12px; }
+@media(max-width:760px) { .creation-trail li > span { flex-basis: 24px; height: 24px; font-size: 10px; }.inspiration button { padding: 6px; } }
+@media(prefers-reduced-motion:reduce) {
+  .wonder-mark, .wonder-mark.closed-loop { animation: none; transform: none; opacity: .4; }
+  .wonder-traveller { transition: none; }
+}

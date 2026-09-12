@@ -3,6 +3,14 @@ export const LANGUAGE_KEY = "picture-score:language";
 
 // Source copy is the message key; artwork titles and musical IDs never pass through this dictionary.
 export const messages: Record<string, Record<Language, string>> = {
+  "庭に置く": { ja: "庭に置く", en: "Plant your song" },
+  "Every shape hides a musical secret.": { ja: "かたちの中に、音のひみつ。", en: "Every shape hides a musical secret." },
+  "閉じてみる？": { ja: "閉じてみる？", en: "What if you close the shape?" },
+  "同じところを、もう一度。": { ja: "同じところを、もう一度。", en: "Over the same line, once more." },
+  "線を交差させたら？": { ja: "線を交差させたら？", en: "What if your lines cross?" },
+  "そっくりな形を描いてみよう。": { ja: "そっくりな形を描いてみよう。", en: "Try a shape that echoes another." },
+  "3つ並べてみる？": { ja: "3つ並べてみる？", en: "Try lining up three drawings." },
+  "三角に置いたら？": { ja: "三角に置いたら？", en: "What if they made a triangle?" },
   "描いて、聴いて、庭へ": { ja: "描いて、聴いて、庭へ", en: "Draw, listen, and grow" },
   "線を描く": { ja: "線を描く", en: "Draw a line" },
   "指を離すと、音が返事。": { ja: "指を離すと、音が返事。", en: "Lift your finger. Hear it answer." },

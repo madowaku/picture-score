@@ -4,12 +4,13 @@ async (page) => {
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({width:1440,height:900});
   await page.evaluate(() => {
-    for (const key of ["picture-score:project:v1","picture-score:garden:v1","picture-score:growth:v1"]) localStorage.removeItem(key);
+    for (const key of ["picture-score:project:v1","picture-score:garden:v1","picture-score:growth:v1","picture-score:wonder:v1"]) localStorage.removeItem(key);
     localStorage.setItem("picture-score:language","ja");
   });
   await page.reload();
   assert(await page.locator(".creation-trail").isVisible(), "draw trail missing");
   assert(await page.locator(".gesture-hint").count() === 0, "hint should be empty-canvas only");
+  await page.waitForTimeout(1900);
   assert(await page.locator(".empty-gesture-hint").isVisible(), "empty-canvas hint missing");
   const canvas = page.getByTestId("score-canvas"), box = await canvas.boundingBox();
   await page.mouse.move(box.x+box.width*.18, box.y+box.height*.72);

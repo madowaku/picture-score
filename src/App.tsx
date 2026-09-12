@@ -48,6 +48,12 @@ import type { Project, Stroke, StrokePoint } from "./music/types";
 import { GardenView } from "./garden/GardenView";
 import { LanguageSwitch, useLanguage } from "./i18n/LanguageContext";
 import { tactileTick } from "./ui/feedback";
+import { drawRelations } from "./wonder/drawRelations";
+import { applyDrawWonder } from "./wonder/drawMusic";
+import { rememberWonder } from "./wonder/wonderMemory";
+import { WonderHint } from "./wonder/wonderHints";
+import { WonderDrawLayer } from "./wonder/WonderDrawLayer";
+import { strokeColor } from "./wonder/palette";
 
 type HistoryFrame = Pick<Project, "title" | "strokes" | "canvasAspect">;
 const IDEA_SETS = [
@@ -62,7 +68,6 @@ const pathFor = (stroke: Stroke) =>
 const formatTime = (seconds: number) =>
   `0:${Math.floor(seconds).toString().padStart(2, "0")}`;
 type GestureKind = "dot" | "sustain" | "chord" | "legato" | "staccato" | "rich";
-const GESTURE_HINTS = ["縦に描くと、ジャーン。", "ぐるぐるは、どんな音？", "名前を鳴らしてみる？", "点も、ひとつの音。"] as const;
 const GESTURE_LABELS: Record<GestureKind, string> = {
   dot: "点のピン", sustain: "横のロングトーン", chord: "縦のコード",
   legato: "なめらかな線", staccato: "跳ねる線", rich: "重なった線",
@@ -150,7 +155,8 @@ export default function App() {
   const [arrivingStroke, setArrivingStroke] = useState<string | null>(null);
   const [answeringStroke, setAnsweringStroke] = useState<string | null>(null);
   const [gestureFeedback, setGestureFeedback] = useState<GestureKind | null>(null);
-  const [hintIndex, setHintIndex] = useState(0);
+  const [wonderStroke, setWonderStroke] = useState<string | null>(null);
+  const [drawingBusy, setDrawingBusy] = useState(false);
   const [nextIdeas, setNextIdeas] = useState<readonly string[]>([]);
   const pointer = useRef<number | null>(null);
   const gestureBefore = useRef<HistoryFrame | null>(null);
@@ -214,10 +220,12 @@ export default function App() {
     () => createVisualNotes(project.strokes, project.magnet),
     [project.strokes, project.magnet],
   );
+  const noteColors = useMemo(() => new Map(project.strokes.map((stroke, index) => [stroke.id, strokeColor(index)])), [project.strokes]);
+  const wonderEffects = useMemo(() => drawRelations(project.strokes), [project.strokes]);
   const music = useMemo(
     () =>
-      createMusic(notes, project.tempo, project.accompaniment, project.magnet),
-    [notes, project.tempo, project.accompaniment, project.magnet],
+      applyDrawWonder(createMusic(notes, project.tempo, project.accompaniment, project.magnet), wonderEffects),
+    [notes, project.tempo, project.accompaniment, project.magnet, wonderEffects],
   );
   const seconds = (BEATS * 60) / project.tempo;
   const playAnchors = useMemo(
@@ -283,10 +291,10 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [arrivingStroke]);
   useEffect(() => {
-    if (draft || nextIdeas.length) return;
-    const timer = setInterval(() => setHintIndex((index) => (index + 1) % GESTURE_HINTS.length), 4200);
-    return () => clearInterval(timer);
-  }, [draft, nextIdeas.length]);
+    if (!wonderStroke) return;
+    const timer = setTimeout(() => setWonderStroke(null), 850);
+    return () => clearTimeout(timer);
+  }, [wonderStroke]);
   useEffect(() => {
     if (!gestureFeedback) return;
     const timer = setTimeout(() => setGestureFeedback(null), 1800);
@@ -350,6 +358,10 @@ export default function App() {
     }
     if (!notes.length) return;
     const generation = ++playGeneration.current;
+    answerGeneration.current++;
+    clearTimeout(answerTimer.current);
+    clearTimeout(answerClearTimer.current);
+    setAnsweringStroke(null);
     setStarting(true);
     setFinished(false);
     try {
@@ -360,6 +372,7 @@ export default function App() {
       }
       setStarting(false);
       setPlaying(true);
+      rememberWonder(wonderEffects.map(effect => effect.rule));
       let lastFrame = -1;
       const frame = () => {
         const elapsed = Math.max(0, engine.current.currentTime - timing.start);
@@ -383,7 +396,7 @@ export default function App() {
       stop();
       setNotice("音を開始できませんでした。もう一度PLAYを押してください。");
     }
-  }, [playing, starting, notes.length, stop, music, project.instrument]);
+  }, [playing, starting, notes.length, stop, music, project.instrument, wonderEffects]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -455,6 +468,8 @@ export default function App() {
     stop();
     setNextIdeas([]);
     setGestureFeedback(null);
+    setWonderStroke(null);
+    setDrawingBusy(true);
     pointer.current = event.pointerId;
     event.currentTarget.setPointerCapture(event.pointerId);
     gestureBefore.current = {
@@ -537,6 +552,7 @@ export default function App() {
     cancelled = false,
   ) {
     if (pointer.current !== event.pointerId) return;
+    setDrawingBusy(false);
     if (!cancelled && draftRef.current) {
       const p = point(event, event.currentTarget.getBoundingClientRect()),
         last = draftRef.current.points.at(-1)!;
@@ -549,7 +565,14 @@ export default function App() {
       const completed = draftRef.current;
       remember(gestureBefore.current!);
       setArrivingStroke(completed.id);
-      update({ strokes: [...projectRef.current.strokes, completed] });
+      const strokes = [...projectRef.current.strokes, completed];
+      const discoveries = drawRelations(strokes).filter(effect => effect.strokeIds.includes(completed.id));
+      update({ strokes });
+      if (discoveries.length) {
+        setWonderStroke(completed.id);
+        rememberWonder(discoveries.map(effect => effect.rule));
+        engine.current.uiTone(discoveries.some(effect => effect.rule === 'crossing-spark') ? 'relation' : 'place');
+      }
       const reply = createMusic(
         createVisualNotes([completed], projectRef.current.magnet),
         projectRef.current.tempo,
@@ -793,7 +816,7 @@ export default function App() {
             <h1>
               {t("Feel the ")}<em>{t("line.")}</em>
             </h1>
-            <p className="intro-copy">{t("Every stroke answers back.")}</p>
+            <p className="intro-copy">{t("Every shape hides a musical secret.")}</p>
           </div>
           <div className="intro-note">
             <svg viewBox="0 0 75 40" aria-hidden="true">
@@ -903,15 +926,15 @@ export default function App() {
                 ))}
               </g>
               <g className="source-strokes">
-                {project.strokes.map((s) => (
-                  <path key={s.id} d={pathFor(s)} data-stroke={s.id} />
+                {project.strokes.map((s, index) => (
+                  <path key={s.id} d={pathFor(s)} data-stroke={s.id} style={{ stroke: strokeColor(index) }} />
                 ))}
               </g>
+              <WonderDrawLayer effects={wonderEffects} strokes={project.strokes} recent={wonderStroke} beat={playing ? progress * BEATS : undefined} />
               {draft && <path ref={draftPathRef} className="draft-stroke" d={pathFor(draft)} />}
               <g className="score-notes">
                 {notes.map((n) => {
-                  const active =
-                    activeSources.has(n.id) && progress * BEATS >= n.beat - 0.12;
+                  const active = activeSources.has(n.id);
                   return (
                     <g
                       key={n.id}
@@ -921,7 +944,8 @@ export default function App() {
                       data-pitch={n.pitch}
                       style={{
                         transform: `translate(${n.visualPosition.x}px, ${n.visualPosition.y}px)`,
-                      }}
+                        "--note-color": noteColors.get(n.sourceStroke),
+                      } as CSSProperties}
                     >
                       <g className={n.sourceStroke === arrivingStroke ? "note-arrival" : ""}
                         style={{ "--arrive-x": (n.sourcePosition.x - n.visualPosition.x) + "px",
@@ -971,7 +995,7 @@ export default function App() {
                 <span className="empty-small">
                   {t("指やマウスで、ここに描いてみよう")}
                 </span>
-                <span className="empty-gesture-hint" data-testid="gesture-hint">{t(GESTURE_HINTS[hintIndex])}</span>
+                <WonderHint space="draw" busy={drawingBusy} enabled={space === "draw"} className="empty-gesture-hint" />
               </div>
             )}
           </div>
@@ -1016,7 +1040,7 @@ export default function App() {
                   ? `${music.playNotes.length} ${music.playNotes.length === 1 ? t("sound") : t("sounds")} · ${formatTime(seconds)}`
                   : t("Every line is a possibility.")}
             </span>
-            {!playing && !nextIdeas.length && !!project.strokes.length && <span className="gesture-hint" data-testid="gesture-hint">{t(GESTURE_HINTS[hintIndex])}</span>}
+            {!!project.strokes.length && <WonderHint space="draw" busy={drawingBusy || playing} enabled={space === "draw"} className="gesture-hint" />}
           </div>
         </section>
 

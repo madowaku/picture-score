@@ -1,6 +1,6 @@
-# Picture Score v0.3 — FEEL THE LINE
+# Picture Score v0.5 — WONDER
 
-**Every stroke answers back.** 描く動きも、描いた一本も、そのまま音楽になる。
+**Every shape hides a musical secret.** かたちの中に、音のひみつ。
 
 指やマウスで描いた絵を、左から右へ読む小さな楽器。AIやサーバーなしで動く、アイデア検証用のブラウザプロトタイプです。
 
@@ -22,6 +22,8 @@ npm run preview
 ```
 
 ## できること
+
+- v0.5 WONDER：閉じる・なぞる・交差・左右対称から音が変わり、Gardenの一列・三角形で音が巡る。6色の線と短い反応、答えを明かさない日英ヒント。[実装と検証](docs/wonder-implementation.md)
 
 - Garden v0.4 PLAYGROUND：触れる、置く、動かすたびに短い音の返事。作品のタップ試聴、4拍のSpotlight、リスナーの軌跡、関係の糸、次に描きたくなる形のヒント。[実装と検証](docs/playground-implementation.md)
 - Garden v0.3 GROW：聴いた音が小さな葉や道として庭に残る。停止・非表示・オフラインでは育たず、元の作品はそのまま。[実装と検証](docs/grow-implementation.md)

@@ -1,10 +1,14 @@
-import type { PlayNote } from "../music/types";
+import type { PlayNote, MusicIR } from "../music/types";
+import { applyDrawWonder } from "../wonder/drawMusic";
+import { drawRelations } from "../wonder/drawRelations";
+const performances = new WeakMap<MusicIR, MusicIR>();
 import type { GardenState, MusicalObject, Position } from "./gardenState";
 
 export type RelationKind = "call-response" | "support" | "pulse-fill" | "sparkle-fill" | "shared-bed";
 export interface EnsembleRelation { a: string; b: string; strength: number; kind: RelationKind }
 export interface ArrangementNote { pitch: number; beat: number; duration: number; velocity: number }
 export interface ObjectArrangementPlan {
+  wonder?: string;
   strength: number;
   roleWeight: number;
   activeWindows: number[];
@@ -26,8 +30,13 @@ export function proximityStrength(a: Position, b: Position) {
   return t * t * (3 - 2 * t);
 }
 export function independentNotes(object: MusicalObject): ArrangementNote[] {
-  const first = object.musicIR.playNotes[0]?.beat ?? 0;
-  return boundNotes(object.musicIR.playNotes.map((n) => ({
+  let performance = performances.get(object.musicIR);
+  if (!performance) {
+    performance = applyDrawWonder(object.musicIR, drawRelations(object.strokeIR));
+    performances.set(object.musicIR, performance);
+  }
+  const first = performance.playNotes[0]?.beat ?? 0;
+  return boundNotes(performance.playNotes.map((n) => ({
     pitch: n.pitch, beat: Math.min(15.75, quarter(n.beat - first)),
     duration: n.duration,
     velocity: Math.min(.65, n.velocity),

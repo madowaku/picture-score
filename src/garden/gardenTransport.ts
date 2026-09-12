@@ -4,6 +4,9 @@ import { mixGarden } from "./gardenMixer";
 import { buildEnsemblePlan, independentNotes, proximityStrength } from "./ensemble";
 import type { ArrangementNote, EnsemblePlan, ObjectArrangementPlan } from "./ensemble";
 import type { HeardSlice } from "./growth";
+import { gardenRelations, StableGardenRelations } from "../wonder/gardenRelations";
+import { applyGardenWonder } from "../wonder/gardenMusic";
+import type { WonderGardenEffect } from "../wonder/wonderTypes";
 
 type Layer = "free" | "ensemble";
 type Activity = { at: number; until: number; layer: Layer; pitch: number };
@@ -25,6 +28,9 @@ export class GardenTransport {
   private next = 0;
   private planBeat = -1;
   private currentPlan?: EnsemblePlan;
+  private spatialStability = new StableGardenRelations();
+  private spatialEffects: WonderGardenEffect[] = [];
+  get wonder() { return this.spatialEffects; }
   private heardTick = -1;
   private tapVoices = new Set<OscillatorNode>();
   private spotlightId?: string;
@@ -148,7 +154,7 @@ export class GardenTransport {
     if (!this.state || !this.ctx) return;
     this.planBeat = Math.floor(beat);
     const previous = this.currentPlan;
-    this.currentPlan = buildEnsemblePlan(this.state, mixGarden(this.state, Math.floor(beat / 16)), Math.floor(beat / 16));
+    this.currentPlan = applyGardenWonder(buildEnsemblePlan(this.state, mixGarden(this.state, Math.floor(beat / 16)), Math.floor(beat / 16)), this.state, this.spatialEffects, beat);
     for (const [id, lane] of this.lanes) {
       const plan = this.currentPlan.objectPlans.get(id)!;
       const window = Math.floor((beat % 16) / 4);
@@ -157,7 +163,7 @@ export class GardenTransport {
       lane.ensemble.gain.setTargetAtTime(plan.strength * plan.roleWeight *
         (plan.activeWindows.includes(window) ? 1 : 0), at, .16);
       const before = previous?.objectPlans.get(id);
-      const changed = !before || before.strength <= .001 || before.kind !== plan.kind ||
+      const changed = !before || before.strength <= .001 || before.kind !== plan.kind || before.wonder !== plan.wonder ||
         before.partnerIds.join() !== plan.partnerIds.join() || before.activeWindows.join() !== plan.activeWindows.join();
       if (changed && plan.strength > .001 && beat >= lane.phase) {
         const local = beat % 16;
@@ -190,6 +196,7 @@ export class GardenTransport {
     this.observeHeard();
     this.applyMix();
     const ctx = this.ctx, seconds = 60 / this.state.bpm;
+    this.spatialEffects = this.spatialStability.update(gardenRelations(this.state, mixGarden(this.state, Math.floor(this.beat / 16))), ctx.currentTime * 1000);
     const beat = this.beat, horizon = beat + .13 / seconds;
     // A stalled frame skips expired subdivisions; it never produces a catch-up burst.
     this.next = Math.max(this.next, Math.floor(beat * 4) / 4);
@@ -245,6 +252,7 @@ export class GardenTransport {
     this.tapVoices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
     this.tapVoices.clear();
     this.lanes.clear(); this.next = 0; this.planBeat = -1; this.currentPlan = undefined;
+    this.spatialStability = new StableGardenRelations(); this.spatialEffects = [];
     this.heardTick = -1; this.spotlightId = undefined; this.spotlightUntil = -1; this.onHeard?.(null);
   }
 }

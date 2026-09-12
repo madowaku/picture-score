@@ -1,4 +1,5 @@
 import type { GardenState, MusicalRole, Position } from "./gardenState";
+import { gardenRelations } from "../wonder/gardenRelations";
 
 /** Smoothstep has zero slope at both the near and far boundary. */
 export function distanceGain(a: Position, b: Position): number {
@@ -14,10 +15,12 @@ export function mixGarden(garden: GardenState, cycle = 0): Map<string, number> {
     priority: (index - cycle % Math.max(1, garden.objects.length) + garden.objects.length) % Math.max(1, garden.objects.length),
   })).sort((a, b) => b.gain - a.gain || a.priority - b.priority);
   const result = new Map(garden.objects.map((o) => [o.id, 0]));
+  const spatial = new Set(gardenRelations(garden, new Map(candidates.map(c => [c.object.id, c.gain])))
+    .filter(e => e.strength > .05).flatMap(e => e.objectIds));
   for (const { object, gain } of candidates) {
     const role = object.musicalRole;
     const ornament = role === "rhythm" || role === "decoration";
-    if (gain < 0.005 || caps[role] <= 0 || (ornament && ornaments >= 2)) continue;
+    if (gain < 0.005 || (!spatial.has(object.id) && (caps[role] <= 0 || (ornament && ornaments >= 2)))) continue;
     caps[role]--;
     if (ornament) ornaments++;
     result.set(object.id, gain * (role === "drone" || role === "harmony" ? 0.6 : 0.85));

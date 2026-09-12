@@ -52,7 +52,7 @@ async (page) => {
     } finally { CanvasRenderingContext2D.prototype.fillText = fillText; }
     return { text, sizes };
   });
-  assert(png.text.includes("PICTURE SCORE  /  ひと筆ごとに、音がこたえる。") && png.text.includes("PICTURE SCORE  /  Every stroke answers back."), "PNG footer not localized");
+  assert(png.text.includes("PICTURE SCORE  /  かたちの中に、音のひみつ。") && png.text.includes("PICTURE SCORE  /  Every shape hides a musical secret."), "PNG footer not localized");
   assert(JSON.stringify(png.sizes[0]) === JSON.stringify(png.sizes[1]), "language changed PNG dimensions");
   const paths = await page.locator("[data-stroke]").evaluateAll((els) => els.map((el) => el.getAttribute("d")));
   await page.getByRole("button", { name: "PLAY — Play your drawing", exact: true }).click();
