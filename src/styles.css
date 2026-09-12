@@ -1,7 +1,7 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=DM+Serif+Display:ital@0;1&family=Noto+Sans+JP:wght@400;500;600&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=M+PLUS+Rounded+1c:wght@400;500;700&family=Nunito+Sans:wght@500;600;700;800&family=Noto+Sans+JP:wght@400;500;600&display=swap");
 
 :root {
-  font-family: "DM Sans", "Noto Sans JP", sans-serif;
+  font-family: "M PLUS Rounded 1c", "Nunito Sans", "DM Sans", "Noto Sans JP", sans-serif;
   color: #30322d;
   background: #f7f6f2;
   font-synthesis: none;
@@ -15,6 +15,13 @@
   --line: #e5e4dc;
   --accent: #cd553c;
   --accent-dark: #aa432d;
+  --ps-coral: #e45f48;
+  --ps-leaf: #5c9b67;
+  --ps-sky: #4f8ea8;
+  --ps-butter: #e6ad4c;
+  --ps-plum: #8f669b;
+  --ps-ink: #30322d;
+  --ps-paper: #fffefa;
 }
 .workspace-toolbar {
   display: grid;
@@ -28,7 +35,7 @@
 .language-switch { justify-self: end; display: flex; align-items: center; gap: 7px; color: #69745e; }
 .language-switch > span { font-size: 11px; white-space: nowrap; }
 .language-switch select { min-height: 44px; max-width: 110px; padding: 5px 4px; border: 0; border-bottom: 1px solid #d8ddcf; background: transparent; color: inherit; cursor: pointer; font-size: 12px; }
-html[lang="ja"] h1 { font-family: "Noto Sans JP", sans-serif; letter-spacing: -1px; font-size: clamp(30px, 3.5vw, 46px); line-height: 1.4; }
+html[lang="ja"] h1 { font-family: "M PLUS Rounded 1c", "Noto Sans JP", sans-serif; font-weight: 700; letter-spacing: -1px; font-size: clamp(30px, 3.5vw, 46px); line-height: 1.35; }
 html[lang="ja"] h1 em { font-style: normal; }
 @media(max-width: 760px) {
   .workspace-toolbar { display: flex; justify-content: space-between; gap: 6px; margin-top: 8px; }
@@ -275,16 +282,17 @@ main {
   line-height: 1;
 }
 h1 {
-  font-family: "DM Serif Display", Georgia, serif;
+  font-family: "Nunito Sans", "M PLUS Rounded 1c", "DM Sans", sans-serif;
   font-size: clamp(38px, 4.1vw, 58px);
-  font-weight: 400;
-  letter-spacing: -1.8px;
+  font-weight: 800;
+  letter-spacing: -1.4px;
   line-height: 1.14;
   margin: 0;
 }
 h1 em {
-  font-weight: 400;
-  color: var(--accent);
+  font-weight: 800;
+  font-style: normal;
+  color: var(--ps-coral);
 }
 .intro-copy {
   font-size: 12px;
@@ -306,10 +314,12 @@ h1 em {
   transform: rotate(15deg);
 }
 .intro-note span {
-  font-family: "DM Serif Display", Georgia, serif;
-  font-style: italic;
+  font-family: "M PLUS Rounded 1c", "Nunito Sans", sans-serif;
+  font-style: normal;
+  font-weight: 700;
   font-size: 17px;
   line-height: 1.45;
+  color: var(--ps-plum);
 }
 .score-paper {
   background: var(--paper);
@@ -602,8 +612,9 @@ h1 em {
   to { opacity: 1; transform: translateY(0); }
 }
 .canvas-caption {
-  font-family: "DM Serif Display", Georgia, serif;
-  font-style: italic;
+  font-family: "M PLUS Rounded 1c", "Nunito Sans", sans-serif;
+  font-style: normal;
+  font-weight: 500;
   font-size: 12px;
   color: #9a9b8f;
 }
@@ -1343,6 +1354,67 @@ h1 em {
   .help-steps strong {
     margin-right: 7px;
   }
+}
+
+/* v0.4 PLAYGROUND: paper with toy-like touch affordances. */
+button:not(:disabled):active {
+  transform: translateY(2px) scale(.97);
+}
+.workspace-toolbar .space-nav button,
+.tool-switch button,
+.inspiration button,
+.garden-draw,
+.place-garden,
+.garden-empty-start {
+  transition: transform .08s ease, background .14s ease, color .14s ease, box-shadow .14s ease;
+}
+.space-nav button[aria-pressed="true"] {
+  background: #dfeee2;
+  color: #3e7651;
+  box-shadow: inset 0 -2px 0 #b5d2b7;
+}
+.play-button {
+  background: var(--ps-coral);
+  border-radius: 11px;
+  box-shadow: 0 4px 0 #b94735, 0 7px 16px #e45f4824;
+}
+.play-button:hover:not(:disabled) { background: #d9513d; }
+.play-button:active:not(:disabled) {
+  transform: translateY(4px) scale(.96);
+  box-shadow: 0 1px 0 #b94735, 0 3px 8px #e45f4824;
+}
+.play-button.playing { animation: playground-beat 1.05s ease-in-out infinite; }
+.score-paper.is-answering { box-shadow: 0 0 0 2px #e6ad4c35, 0 8px 28px #e6ad4c1c; }
+.score-paper.is-answering .status-dot { background: var(--ps-butter); }
+.paper-label { flex-wrap: wrap; row-gap: 5px; }
+.gesture-badge {
+  color: var(--ps-plum);
+  background: #f1e8f3;
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-size: 8px;
+  letter-spacing: .3px;
+  animation: gesture-pop .18s ease-out both;
+}
+.empty-gesture-hint,
+.gesture-hint {
+  color: var(--ps-plum) !important;
+  font-weight: 700;
+  letter-spacing: .35px !important;
+}
+.empty-gesture-hint { margin-top: 10px; }
+.paper-footer .gesture-hint { margin-right: auto; font-size: 10px; }
+@keyframes playground-beat {
+  0%,100% { box-shadow: 0 4px 0 #b94735, 0 7px 16px #e45f4824; }
+  50% { box-shadow: 0 4px 0 #b94735, 0 7px 22px #e45f4850; }
+}
+@keyframes gesture-pop {
+  from { opacity: 0; transform: translateY(3px) scale(.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .play-button.playing { animation: none; }
+  .gesture-badge { animation: none; }
 }
 @media (max-width: 420px) {
   .app-shell {

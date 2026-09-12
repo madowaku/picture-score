@@ -1,8 +1,9 @@
 import { outputBus, voice } from "../music/audio";
 import type { GardenState, MusicalObject } from "./gardenState";
 import { mixGarden } from "./gardenMixer";
-import { buildEnsemblePlan, independentNotes } from "./ensemble";
+import { buildEnsemblePlan, independentNotes, proximityStrength } from "./ensemble";
 import type { ArrangementNote, EnsemblePlan, ObjectArrangementPlan } from "./ensemble";
+import type { HeardSlice } from "./growth";
 
 type Layer = "free" | "ensemble";
 type Activity = { at: number; until: number; layer: Layer; pitch: number };
@@ -24,6 +25,11 @@ export class GardenTransport {
   private next = 0;
   private planBeat = -1;
   private currentPlan?: EnsemblePlan;
+  private heardTick = -1;
+  private tapVoices = new Set<OscillatorNode>();
+  private spotlightId?: string;
+  private spotlightUntil = -1;
+  onHeard?: (slice: HeardSlice | null) => void;
   running = false;
   get beat() { return this.running && this.ctx && this.state ? Math.max(0, (this.ctx.currentTime - this.startTime) * this.state.bpm / 60) : 0; }
   get plan() { return this.currentPlan; }
@@ -87,8 +93,56 @@ export class GardenTransport {
   }
   private applyMix() {
     if (!this.state || !this.ctx) return;
+    if (this.spotlightId && this.beat >= this.spotlightUntil) {
+      this.spotlightId = undefined;
+      this.spotlightUntil = -1;
+    }
     const mix = mixGarden(this.state, Math.floor(this.beat / 16));
-    for (const [id, lane] of this.lanes) lane.gain.gain.setTargetAtTime(mix.get(id) ?? 0, this.ctx.currentTime, 0.12);
+    const spotlight = this.spotlightId && this.beat < this.spotlightUntil ? this.spotlightId : undefined;
+    for (const [id, lane] of this.lanes) {
+      const base = mix.get(id) ?? 0;
+      const factor = spotlight ? id === spotlight ? 1.25 : .68 : 1;
+      const target = spotlight && id === spotlight
+        ? Math.max(.12, base * factor)
+        : spotlight && base > .005
+          ? Math.max(.02, base * factor)
+          : base * factor;
+      lane.gain.gain.setTargetAtTime(Math.min(.75, target), this.ctx.currentTime, 0.12);
+    }
+  }
+
+  /** Audition one or two placed works. A running garden shares its next quarter boundary. */
+  ping(ids: string | string[]) {
+    if (!this.ctx || !this.master || !this.state) return;
+    const requested = Array.isArray(ids) ? ids : [ids];
+    const unique = [...new Set(requested)].map((id) => this.lanes.get(id)).filter((lane): lane is Lane => !!lane);
+    if (!unique.length) return;
+    const seconds = 60 / this.state.bpm;
+    const now = this.ctx.currentTime;
+    const at = this.running
+      ? Math.max(now + .012, this.startTime + Math.ceil(this.beat - .0001) * seconds)
+      : now + .02;
+    unique.forEach((lane, laneIndex) => {
+      lane.notes.slice(0, 3).forEach((note, index) => {
+        const start = at + index * .115 + laneIndex * .012;
+        const nodes = voice(this.ctx!, this.master!, note.pitch, start,
+          Math.min(.18, Math.max(.08, note.duration * seconds * .55)),
+          Math.min(.32, note.velocity * .55),
+          lane.object.musicalRole === "decoration" ? "Pluck" : lane.object.project.instrument);
+        nodes.forEach((node) => {
+          this.tapVoices.add(node);
+          node.addEventListener("ended", () => this.tapVoices.delete(node));
+        });
+      });
+    });
+  }
+
+  /** Temporarily makes one selected work the lead; the clock and arrangement continue. */
+  spotlight(id: string, beats = 4) {
+    if (!this.state?.objects.some((object) => object.id === id)) return;
+    this.spotlightId = id;
+    this.spotlightUntil = this.beat + Math.max(1, beats);
+    this.applyMix();
   }
   private applyPlan(beat: number, at: number) {
     if (!this.state || !this.ctx) return;
@@ -133,6 +187,7 @@ export class GardenTransport {
   }
   private schedule() {
     if (!this.running || !this.ctx || !this.state) return;
+    this.observeHeard();
     this.applyMix();
     const ctx = this.ctx, seconds = 60 / this.state.bpm;
     const beat = this.beat, horizon = beat + .13 / seconds;
@@ -160,12 +215,36 @@ export class GardenTransport {
     lane.voices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
     lane.voices.clear(); lane.layerVoices.free.clear(); lane.layerVoices.ensemble.clear(); lane.activity = [];
   }
+  private observeHeard() {
+    const tick = Math.floor(this.beat * 4);
+    if (tick === this.heardTick || !this.state) return;
+    const consecutive = tick === this.heardTick + 1 && this.heardTick >= 0;
+    this.heardTick = tick;
+    if (!consecutive || document.hidden || this.ctx?.state !== "running") { this.onHeard?.(null); return; }
+    const mix = mixGarden(this.state, Math.floor(this.beat / 16));
+    const eligible = [...this.lanes].filter(([id, lane]) => (mix.get(id) ?? 0) > .015 && lane.gain.gain.value > .015).map(([id]) => id);
+    const now = this.ctx.currentTime;
+    const audible = eligible.filter((id) => {
+      const lane = this.lanes.get(id)!;
+      return lane.activity.some((event) => event.at <= now && event.until > now &&
+        lane.gain.gain.value * lane[event.layer].gain.value > .015);
+    });
+    // Read-only observation of the existing clock. Never award missed/background slices.
+    this.onHeard?.({ beat: this.beat, delta: .25, audible, eligible,
+      relations: (this.currentPlan?.relations ?? []).flatMap((r) => {
+        const a = this.state!.objects.find((o) => o.id === r.a), b = this.state!.objects.find((o) => o.id === r.b);
+        return a && b ? [{ ...r, strength: Math.min(r.strength, proximityStrength(a.world, b.world)) }] : [];
+      }) });
+  }
   stop() {
     this.generation++; this.running = false; clearInterval(this.timer);
     for (const lane of this.lanes.values()) {
       this.clearVoices(lane);
       lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect();
     }
+    this.tapVoices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
+    this.tapVoices.clear();
     this.lanes.clear(); this.next = 0; this.planBeat = -1; this.currentPlan = undefined;
+    this.heardTick = -1; this.spotlightId = undefined; this.spotlightUntil = -1; this.onHeard?.(null);
   }
 }

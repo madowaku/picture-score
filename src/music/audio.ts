@@ -128,6 +128,7 @@ export class AudioEngine {
   private lastPitch = -1;
   private settleBuffer?: AudioBuffer;
   private settleLoading?: Promise<void>;
+  private uiVoices = new Set<OscillatorNode>();
   async unlock() {
     if (!this.ctx) {
       this.ctx = new AudioContext();
@@ -164,6 +165,23 @@ export class AudioEngine {
         gain.disconnect();
       });
     }
+  }
+  /** Short tonal UI vocabulary. It shares the active engine and never replaces a musical phrase. */
+  uiTone(kind: "place" | "relation" | "growth" | "remove" | "press", pitch = 60) {
+    if (!this.ctx || !this.bus || this.ctx.state !== "running") return;
+    const spec = {
+      place: { pitch: pitch + 7, duration: .12, velocity: .22, instrument: "Toy" as Instrument },
+      relation: { pitch: pitch + 12, duration: .18, velocity: .2, instrument: "Bell" as Instrument },
+      growth: { pitch: pitch + 4, duration: .24, velocity: .16, instrument: "Bell" as Instrument },
+      remove: { pitch: pitch - 5, duration: .1, velocity: .14, instrument: "Pluck" as Instrument },
+      press: { pitch, duration: .055, velocity: .1, instrument: "Pluck" as Instrument },
+    }[kind];
+    const nodes = voice(this.ctx, this.bus, spec.pitch, this.ctx.currentTime + .008,
+      spec.duration, spec.velocity, spec.instrument);
+    nodes.forEach((node) => {
+      this.uiVoices.add(node);
+      node.addEventListener("ended", () => this.uiVoices.delete(node));
+    });
   }
   preview(y: number, speed: number, instrument: Instrument) {
     if (!this.ctx || !this.bus || this.ctx.state !== "running") return;
@@ -272,6 +290,14 @@ export class AudioEngine {
       }
     });
     this.voices.clear();
+    this.uiVoices.forEach((node) => {
+      try {
+        node.stop();
+      } catch {
+        /* already ended */
+      }
+    });
+    this.uiVoices.clear();
   }
 }
 

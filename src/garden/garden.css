@@ -1,4 +1,17 @@
 .space-nav { display:flex; justify-content:center; gap:6px; padding:16px 0 0; }
+.creation-trail { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); list-style:none; padding:0 0 18px; margin:0; gap:22px; }
+.creation-trail li { display:flex; align-items:flex-start; gap:10px; }
+.creation-trail li > span { color:#a47759; font:italic 19px Georgia,serif; padding-top:2px; }
+.creation-trail p { margin:0; font-size:11px; line-height:1.7; color:#777569; }
+.creation-trail strong { display:block; color:#575a49; font-size:12px; font-weight:500; }
+.garden-empty-start { pointer-events:auto; display:flex; align-items:center; gap:8px; margin-top:22px; min-height:44px; padding:10px 18px; border-radius:8px; background:#526647; color:#fffefa; }
+.garden-empty-start:hover:not(:disabled) { background:#405337; color:white; }
+@media(max-width:760px) {
+ .creation-trail { gap:10px; padding-bottom:15px; }
+ .creation-trail li { gap:5px; }.creation-trail li > span { font-size:15px; }
+ .creation-trail p { font-size:10px; }.creation-trail strong { font-size:11px; }
+ .garden-intro h1 { text-wrap:balance; font-size:clamp(25px,7vw,31px); }
+}
 .space-nav button { display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 22px; font-size:11px; letter-spacing:1.3px; border-radius:24px; color:#7b8270; }
 .space-nav button[aria-pressed="true"] { background:#e5e8dc; color:#405637; }
 .garden-view { max-width:1172px; margin:0 auto 30px; }
@@ -16,12 +29,25 @@
 .garden-clock { display:flex; gap:8px; margin-left:auto; }
 .garden-clock i { width:6px; height:6px; border-radius:50%; background:#d4dacb; }
 .garden-clock i.lit { background:#8a9b61; box-shadow:0 0 0 4px #8a9b611b; }
-.garden-field { position:relative; height:clamp(380px,54vh,610px); border:1px solid #dce1d2; border-top:0; border-radius:0 0 12px 12px; overflow:hidden; touch-action:none; user-select:none; background:radial-gradient(ellipse at 75% 20%,#ebeedf 0,transparent 42%),radial-gradient(ellipse at 17% 75%,#e8ecdf 0,transparent 40%),#f4f5eb; }
+.garden-field { position:relative; height:clamp(380px,54vh,610px); border:1px solid #dce1d2; border-top:0; border-radius:0 0 12px 12px; overflow:hidden; touch-action:none; user-select:none; background:radial-gradient(ellipse at 75% 20%,#dcefed 0,transparent 42%),radial-gradient(ellipse at 17% 75%,#e4f1d9 0,transparent 40%),radial-gradient(ellipse at 58% 52%,#fff5d8 0,transparent 48%),#f8faef; }
 .garden-landscape { position:absolute; width:100%; height:100%; pointer-events:none; }
 .garden-landscape path { fill:none; stroke:#e3e5d4; stroke-width:28; }
 .garden-landscape ellipse { fill:#dfe8dd; stroke:#d5dfd1; }
 .ensemble-links { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-.ensemble-links path { fill:none; stroke:#7d956e; stroke-width:1.3; vector-effect:non-scaling-stroke; transition:opacity .3s; }
+.growth-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:hidden; }
+.growth-layer * { pointer-events:none; }
+.growth-habitat { stroke:#9ba783; fill:#bcc7a44a; stroke-width:1; opacity:.48; }
+.growth-habitat path,.growth-path { vector-effect:non-scaling-stroke; }
+.growth-drone { fill:none; stroke:#9cad99; opacity:.4; }
+.growth-rhythm { fill:#a8b28f; stroke:none; }
+.growth-decoration { fill:#c1b47e55; stroke:#b6ab83; }
+.growth-path { stroke:#9ca67b; stroke-width:2.5; fill:none; stroke-linecap:round; }
+.growth-layer > g { fill:#a8b28f; }
+.growth-moment { animation:growth-unfold 550ms ease-out; transform-box:fill-box; transform-origin:center; }
+@keyframes growth-unfold { from { opacity:0; } }
+@media(prefers-reduced-motion:reduce) { .growth-moment { animation:none; } }
+.ensemble-links path { fill:none; stroke:#5c9b67; stroke-width:2; vector-effect:non-scaling-stroke; transition:opacity .3s,stroke-width .3s; }
+.ensemble-links path.relation-moment { stroke:#e6ad4c; stroke-width:3.2; animation:relation-thread .9s ease-out both; }
 .garden-artwork .artwork-drawing { transform:scale(var(--ensemble-breath,1)); transition:transform 80ms linear; }
 .garden-artwork.crowded:not(.chosen) .artwork-title,
 .garden-artwork.crowded:not(.chosen) small { visibility:hidden; }
@@ -30,6 +56,7 @@
 .ensemble-status span { display:block; font-size:10px; color:#89927f; }
 .garden-selection { flex-wrap:wrap; overflow-wrap:anywhere; }
 @keyframes placement-bloom { from { opacity:.5; transform:scale(.8); } to { opacity:0; transform:scale(1.18); } }
+@keyframes relation-thread { 0% { stroke-dasharray:2 16; stroke-dashoffset:18; } 45% { stroke-dasharray:12 8; stroke-dashoffset:0; } 100% { stroke-dasharray:none; } }
 @media(prefers-reduced-motion:reduce) { .garden-artwork .artwork-drawing { transform:none; transition:none; }.garden-artwork.placement-bloom:after { animation:none; opacity:.25; } }
 .garden-landmark { position:absolute; font-size:8px; color:#96a087; letter-spacing:2px; pointer-events:none; }
 .garden-landmark.north { top:24px; left:25px; }.garden-landmark.south { bottom:22px; right:24px; }
@@ -59,4 +86,43 @@
  .garden-field { height:460px; }.garden-artwork { width:76px; }.artwork-drawing { max-height:90px; }
  .garden-bottom { align-items:flex-start; flex-wrap:wrap; }.garden-bottom p { margin:0; }.garden-actions { flex-wrap:wrap; }
  .garden-landmark { font-size:7px; letter-spacing:1px; }.garden-intro .eyebrow { font-size:7px; }
+}
+
+/* v0.4 PLAYGROUND reactions: direct touch, spatial listening, and visible growth. */
+.garden-field.place-pulse::after {
+  content:""; position:absolute; inset:10%; border:2px solid #e6ad4c55; border-radius:34% 66% 58% 42%;
+  pointer-events:none; animation:garden-ground-pulse .85s ease-out both;
+}
+.garden-artwork:not(:disabled):active { transform:translate(-50%,-50%) scale(.96); cursor:grabbing; }
+.garden-artwork.pressed .artwork-drawing { transform:scale(.94); }
+.garden-artwork.near-listener:before { border-color:#4f8ea888; box-shadow:0 0 0 5px #4f8ea812; }
+.garden-artwork.answer-pulse .artwork-drawing { animation:artwork-answer .52s cubic-bezier(.2,.8,.25,1); }
+.garden-artwork.spotlight-dim { opacity:.62; filter:saturate(.72); }
+.garden-artwork.spotlight-lead { z-index:3; color:#d2573d; filter:saturate(1.12); }
+.garden-selection-actions { display:flex; align-items:center; gap:12px; }
+.spotlight-button { color:#8f669b !important; font-weight:700; }
+.listener-trail { position:absolute; inset:0; pointer-events:none; z-index:1; }
+.listener-trail i { position:absolute; width:9px; height:9px; border-radius:50%; transform:translate(-50%,-50%); background:#4f8ea8; }
+.garden-listener { z-index:4; }
+.garden-listener .listener-orb { position:static; top:auto; display:flex; align-items:center; justify-content:center; width:100%; height:100%; font-size:inherit; letter-spacing:normal; }
+.garden-listener .listener-label { position:absolute; top:51px; font-size:8px; letter-spacing:2px; }
+.garden-listener.listening { border-color:#4f8ea8; box-shadow:0 0 0 5px #4f8ea81b, 0 3px 16px #4f8ea836; }
+.garden-listener.listening .listener-orb { animation:listener-breathe 1.05s ease-in-out infinite; }
+.garden-listener.sweeping .listener-orb { color:#3b778f; }
+.growth-habitat { opacity:.72; stroke-width:1.45; }
+.growth-melody { fill:#5c9b67aa; stroke:#3d8754; }
+.growth-harmony { fill:#a271a7aa; stroke:#835487; }
+.growth-drone { fill:#6a9bb2aa; stroke:#447c98; }
+.growth-rhythm { fill:#e4a052; stroke:#bd7134; }
+.growth-decoration { fill:#e6ad4caa; stroke:#bd8831; }
+.growth-path { stroke:#5c8b64; stroke-width:3.6; opacity:.82; }
+@keyframes garden-ground-pulse { from { opacity:0; transform:scale(.92) rotate(-2deg); } 22% { opacity:1; } to { opacity:0; transform:scale(1.04) rotate(1deg); } }
+@keyframes artwork-answer { 0% { transform:scale(1); } 22% { transform:scale(1.1); } 100% { transform:scale(1); } }
+@keyframes listener-breathe { 0%,100% { transform:scale(.95); } 50% { transform:scale(1.08); } }
+@media(max-width:760px) {
+  .garden-selection-actions { width:100%; gap:8px; }
+  .garden-selection-actions button { flex:1; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .garden-field.place-pulse::after, .garden-artwork.answer-pulse .artwork-drawing, .garden-listener.listening .listener-orb, .ensemble-links path.relation-moment { animation:none; }
 }

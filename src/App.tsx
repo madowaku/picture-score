@@ -47,6 +47,7 @@ import {
 import type { Project, Stroke, StrokePoint } from "./music/types";
 import { GardenView } from "./garden/GardenView";
 import { LanguageSwitch, useLanguage } from "./i18n/LanguageContext";
+import { tactileTick } from "./ui/feedback";
 
 type HistoryFrame = Pick<Project, "title" | "strokes" | "canvasAspect">;
 const IDEA_SETS = [
@@ -60,6 +61,33 @@ const pathFor = (stroke: Stroke) =>
     .join(" ") + (stroke.points.length === 1 ? "l0.1,0" : "");
 const formatTime = (seconds: number) =>
   `0:${Math.floor(seconds).toString().padStart(2, "0")}`;
+type GestureKind = "dot" | "sustain" | "chord" | "legato" | "staccato" | "rich";
+const GESTURE_HINTS = ["縦に描くと、ジャーン。", "ぐるぐるは、どんな音？", "名前を鳴らしてみる？", "点も、ひとつの音。"] as const;
+const GESTURE_LABELS: Record<GestureKind, string> = {
+  dot: "点のピン", sustain: "横のロングトーン", chord: "縦のコード",
+  legato: "なめらかな線", staccato: "跳ねる線", rich: "重なった線",
+};
+function gestureKind(stroke: Stroke): GestureKind {
+  const points = stroke.points;
+  if (points.length < 3) return "dot";
+  const first = points[0], last = points.at(-1)!;
+  const dx = Math.abs(last.x - first.x), dy = Math.abs(last.y - first.y);
+  const length = points.reduce((sum, point, index) => sum + (index ? Math.hypot(point.x - points[index - 1].x, point.y - points[index - 1].y) : 0), 0);
+  if (length < 28) return "dot";
+  if (dy > dx * 1.65) return "chord";
+  if (dx > dy * 2.3) return "sustain";
+  let turns = 0, sharp = 0;
+  for (let i = 1; i < points.length - 1; i++) {
+    const a = points[i - 1], b = points[i], c = points[i + 1];
+    const abx = b.x - a.x, aby = b.y - a.y, bcx = c.x - b.x, bcy = c.y - b.y;
+    const norm = Math.hypot(abx, aby) * Math.hypot(bcx, bcy);
+    if (norm < 1) continue;
+    turns++;
+    if ((abx * bcx + aby * bcy) / norm < .1) sharp++;
+  }
+  if (length > 850 || points.length > 180) return "rich";
+  return turns > 2 && sharp / turns > .2 ? "staccato" : "legato";
+}
 
 function Logo({ small = false }: { small?: boolean }) {
   return (
@@ -121,6 +149,8 @@ export default function App() {
   const remainingPoints = useRef(0);
   const [arrivingStroke, setArrivingStroke] = useState<string | null>(null);
   const [answeringStroke, setAnsweringStroke] = useState<string | null>(null);
+  const [gestureFeedback, setGestureFeedback] = useState<GestureKind | null>(null);
+  const [hintIndex, setHintIndex] = useState(0);
   const [nextIdeas, setNextIdeas] = useState<readonly string[]>([]);
   const pointer = useRef<number | null>(null);
   const gestureBefore = useRef<HistoryFrame | null>(null);
@@ -253,6 +283,16 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [arrivingStroke]);
   useEffect(() => {
+    if (draft || nextIdeas.length) return;
+    const timer = setInterval(() => setHintIndex((index) => (index + 1) % GESTURE_HINTS.length), 4200);
+    return () => clearInterval(timer);
+  }, [draft, nextIdeas.length]);
+  useEffect(() => {
+    if (!gestureFeedback) return;
+    const timer = setTimeout(() => setGestureFeedback(null), 1800);
+    return () => clearTimeout(timer);
+  }, [gestureFeedback]);
+  useEffect(() => {
     const visibility = () => {
       if (document.hidden) stop();
     };
@@ -286,6 +326,7 @@ export default function App() {
       canvasAspect: projectRef.current.canvasAspect,
     });
     update(previous);
+    engine.current.uiTone("remove");
     refreshHistory((n) => n + 1);
   }, [stop, update]);
   const redo = useCallback(() => {
@@ -298,6 +339,7 @@ export default function App() {
       canvasAspect: projectRef.current.canvasAspect,
     });
     update(next);
+    engine.current.uiTone("place");
     refreshHistory((n) => n + 1);
   }, [stop, update]);
 
@@ -412,6 +454,7 @@ export default function App() {
     event.preventDefault();
     stop();
     setNextIdeas([]);
+    setGestureFeedback(null);
     pointer.current = event.pointerId;
     event.currentTarget.setPointerCapture(event.pointerId);
     gestureBefore.current = {
@@ -514,6 +557,8 @@ export default function App() {
         projectRef.current.magnet,
       );
       engine.current.settle(Math.min(3, reply.playNotes.length));
+      tactileTick(5);
+      setGestureFeedback(gestureKind(completed));
       const generation = ++answerGeneration.current;
       answerTimer.current = setTimeout(() => {
         if (generation !== answerGeneration.current) return;
@@ -559,6 +604,7 @@ export default function App() {
         cat: "A curious little cat",
       }[kind],
     });
+    engine.current.uiTone("place");
     setTool("draw");
   }
   function clearCanvas() {
@@ -570,6 +616,7 @@ export default function App() {
       canvasAspect: project.canvasAspect,
     });
     update({ strokes: [], title: "Untitled no. 01" });
+    engine.current.uiTone("remove");
     setTool("draw");
     setNotice("新しい一枚。Undoで前の絵に戻せます。");
   }
@@ -767,8 +814,14 @@ export default function App() {
           </div>
         </section>
 
+        <ol className="creation-trail" aria-label={t("描いて、聴いて、庭へ") }>
+          <li><span>01</span><p><strong>{t("線を描く")}</strong>{t("指を離すと、音が返事。")}</p></li>
+          <li><span>02</span><p><strong>{t("PLAYで聴く")}</strong>{t("描いた絵が、ひとつの曲に。")}</p></li>
+          <li><span>03</span><p><strong>{t("庭に置く")}</strong>{t("音を並べて、自分だけの庭へ。")}</p></li>
+        </ol>
+
         <section
-          className={`score-paper ${finished ? "finished" : ""} ${playing ? "is-playing" : ""}`}
+          className={`score-paper ${finished ? "finished" : ""} ${playing ? "is-playing" : ""} ${answeringStroke ? "is-answering" : ""}`}
           aria-label={t("楽譜キャンバス")}
         >
           <div className="paper-heading">
@@ -779,7 +832,10 @@ export default function App() {
                   ? t("YOUR DRAWING IS PLAYING")
                   : draft
                     ? t("FOLLOW YOUR LINE")
+                  : answeringStroke
+                    ? t("PICTURE SCORE IS ANSWERING")
                     : t("YOUR LITTLE COMPOSITION")}
+                {gestureFeedback && <span className="gesture-badge" data-testid="gesture-feedback">{t(GESTURE_LABELS[gestureFeedback])}</span>}
               </span>
             </div>
             <div className="paper-meta">
@@ -915,6 +971,7 @@ export default function App() {
                 <span className="empty-small">
                   {t("指やマウスで、ここに描いてみよう")}
                 </span>
+                <span className="empty-gesture-hint" data-testid="gesture-hint">{t(GESTURE_HINTS[hintIndex])}</span>
               </div>
             )}
           </div>
@@ -959,6 +1016,7 @@ export default function App() {
                   ? `${music.playNotes.length} ${music.playNotes.length === 1 ? t("sound") : t("sounds")} · ${formatTime(seconds)}`
                   : t("Every line is a possibility.")}
             </span>
+            {!playing && !nextIdeas.length && !!project.strokes.length && <span className="gesture-hint" data-testid="gesture-hint">{t(GESTURE_HINTS[hintIndex])}</span>}
           </div>
         </section>
 
