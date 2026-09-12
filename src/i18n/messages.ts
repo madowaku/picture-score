@@ -3,6 +3,14 @@ export const LANGUAGE_KEY = "picture-score:language";
 
 // Source copy is the message key; artwork titles and musical IDs never pass through this dictionary.
 export const messages: Record<string, Record<Language, string>> = {
+  "もうひとつ描いたら、近くに置いてみよう。どんな返事がする？": { ja: "もうひとつ描いたら、近くに置いてみよう。どんな返事がする？", en: "Draw another and place it nearby. What will it answer?" },
+  "ふたつの絵を近づけたら、どんな会話になる？": { ja: "ふたつの絵を近づけたら、どんな会話になる？", en: "Bring two drawings closer. What will they say to each other?" },
+  "{a}と{b}が、交代で歌っている。": { ja: "{a}と{b}が、交代で歌っている。", en: "{a} and {b} are taking turns." },
+  "{a}が、{b}をそっと支えている。": { ja: "{a}が、{b}をそっと支えている。", en: "{a} is gently supporting {b}." },
+  "{a}が、{b}の合間にリズムを添えている。": { ja: "{a}が、{b}の合間にリズムを添えている。", en: "{a} adds a pulse between {b}’s phrases." },
+  "{a}が、{b}の合間にきらめいている。": { ja: "{a}が、{b}の合間にきらめいている。", en: "{a} sparkles in the spaces around {b}." },
+  "{a}と{b}が、ひとつの余韻をつくっている。": { ja: "{a}と{b}が、ひとつの余韻をつくっている。", en: "{a} and {b} share a gentle bed of sound." },
+  "少し離すと、それぞれの歌に戻る。": { ja: "少し離すと、それぞれの歌に戻る。", en: "Move them apart to hear their own songs again." },
   "Picture Score ホーム": {
     "ja": "Picture Score ホーム",
     "en": "Picture Score home"

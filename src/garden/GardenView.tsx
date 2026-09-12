@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { PointerEvent as ReactPointerEvent, KeyboardEvent } from "react";
+import type { PointerEvent as ReactPointerEvent, KeyboardEvent, CSSProperties } from "react";
 import { Ear, Pencil, Play, Square, Sprout, X } from "lucide-react";
 import type { Project, Stroke } from "../music/types";
 import { clamp } from "../music/score";
@@ -7,10 +7,18 @@ import { GARDEN_KEY, loadGarden, makeObject, MAX_OBJECTS } from "./gardenState";
 import type { MusicalObject, Position } from "./gardenState";
 import { mixGarden } from "./gardenMixer";
 import { GardenTransport } from "./gardenTransport";
+import type { RelationKind } from "./ensemble";
 import "./garden.css";
 import { useLanguage } from "../i18n/LanguageContext";
 
 const roleNames = { melody: "うた", harmony: "和音", drone: "余韻", rhythm: "リズム", decoration: "きらめき" };
+const relationCopy: Record<RelationKind, string> = {
+  "call-response": "{a}と{b}が、交代で歌っている。",
+  "support": "{a}が、{b}をそっと支えている。",
+  "pulse-fill": "{a}が、{b}の合間にリズムを添えている。",
+  "sparkle-fill": "{a}が、{b}の合間にきらめいている。",
+  "shared-bed": "{a}と{b}が、ひとつの余韻をつくっている。",
+};
 const path = (s: Stroke) => s.points.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ") + (s.points.length === 1 ? "l0.1,0" : "");
 function Artwork({ object }: { object: MusicalObject }) {
   return <svg viewBox="-18 -18 1036 456" preserveAspectRatio="none" aria-hidden="true"
@@ -36,10 +44,22 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   const field = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ pointer: number; target: string; offset: Position } | null>(null);
   const transport = useRef(new GardenTransport());
+  const births = useRef(new Map<string, number | null>());
   const pending = useMemo(() => seed ? makeObject(seed, { x: 0.5, y: 0.42 }, "pending") : null, [seed]);
   const mix = mixGarden(garden, Math.floor(beat / 16));
   const selectedObject = garden.objects.find((o) => o.id === selected);
+  const curiosity = garden.objects.length === 1
+    ? "もうひとつ描いたら、近くに置いてみよう。どんな返事がする？"
+    : "ふたつの絵を近づけたら、どんな会話になる？";
+  const relations = playing && !pending ? transport.current.plan?.relations.filter((r) =>
+    (r.a === selected || r.b === selected) && r.strength > .08) ?? [] : [];
+  const leadRelation = relations[0];
+  const relationNames = leadRelation ? [leadRelation.a, leadRelation.b].map((id) => garden.objects.find((o) => o.id === id)) : [];
+  if ((leadRelation?.kind === "support" && relationNames[0]?.musicalRole === "melody") ||
+    (leadRelation?.kind === "pulse-fill" && relationNames[0]?.musicalRole !== "rhythm") ||
+    (leadRelation?.kind === "sparkle-fill" && relationNames[0]?.musicalRole !== "decoration")) relationNames.reverse();
   function change(next: typeof garden) {
+    for (const id of births.current.keys()) if (!next.objects.some((o) => o.id === id)) births.current.delete(id);
     changed.current = true; stateRef.current = next; setGarden(next); transport.current.update(next);
   }
   useEffect(() => {
@@ -62,7 +82,13 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   }, []);
   useEffect(() => {
     if (!playing) return;
-    const timer = setInterval(() => setBeat(transport.current.beat), 80);
+    const timer = setInterval(() => {
+      for (const [id, born] of births.current) {
+        if (born === null && transport.current.isSounding(id)) births.current.set(id, performance.now());
+        else if (born !== null && performance.now() - born > 850) births.current.delete(id);
+      }
+      setBeat(transport.current.beat);
+    }, 80);
     return () => clearInterval(timer);
   }, [playing]);
   async function listen() {
@@ -106,6 +132,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   function place(p: Position) {
     if (!seed || stateRef.current.objects.length >= MAX_OBJECTS) return;
     const object = makeObject(seed, p);
+    births.current.set(object.id, null);
     change({ ...stateRef.current, objects: [...stateRef.current.objects, object] });
     setSelected(object.id); onSeedPlaced(); void listen();
   }
@@ -127,7 +154,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     moveTarget(target, { x: clamp(p.x + delta[event.key].x, 0.06, 0.94), y: clamp(p.y + delta[event.key].y, 0.08, 0.92) });
   }
   return <section className="garden-view" hidden={!active} aria-label={t("Garden 音の庭")}>
-    <div className="garden-intro"><div><p className="eyebrow"><Sprout size={14} /> PICTURE SCORE GARDEN · 01</p>
+    <div className="garden-intro"><div><p className="eyebrow"><Sprout size={14} /> PICTURE SCORE GARDEN · ENSEMBLE</p>
       <h1>{t("Give your song ")}<em>{t("a place.")}</em></h1><p className="intro-copy">{t("絵を置いて、音のあいだを歩こう。")}</p></div>
       <span className="garden-count">{garden.objects.length} / {MAX_OBJECTS}<small>{t("sounds growing")}</small></span></div>
     <div className="garden-toolbar">
@@ -148,13 +175,29 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         <path d="M-30 590C140 620 110 370 325 350S470 140 660 220 740 480 1040 345" />
         <ellipse cx="805" cy="123" rx="84" ry="30" /><ellipse cx="155" cy="490" rx="65" ry="23" />
       </svg>
+      <svg className="ensemble-links" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
+        {relations.map((relation) => {
+          const a = garden.objects.find((o) => o.id === relation.a)?.world;
+          const b = garden.objects.find((o) => o.id === relation.b)?.world;
+          return a && b ? <path key={relation.a + ":" + relation.b} data-relation={relation.kind}
+            data-strength={relation.strength.toFixed(3)}
+            d={`M${a.x * 1000},${a.y * 1000} Q${(a.x + b.x) * 500},${(a.y + b.y) * 500 - 45} ${b.x * 1000},${b.y * 1000}`}
+            style={{ opacity: .12 + relation.strength * .25 }} /> : null;
+        })}
+      </svg>
       <span className="garden-landmark north">{t("THE QUIET CORNER")}</span><span className="garden-landmark south">{t("ROOM FOR ANOTHER SONG")}</span>
       {!garden.objects.length && !pending && <div className="garden-empty"><Sprout size={30} /><p>{t("まだ静かな、小さな庭。")}</p><span>{t("ひと筆描いて、最初の音を植えてみよう。")}</span></div>}
       {garden.objects.map((object) => {
-        const audible = playing && (mix.get(object.id) ?? 0) > 0.015;
+        const audible = playing && transport.current.isSounding(object.id);
+        const born = births.current.get(object.id);
+        const bloom = playing && born != null && performance.now() - born < 850;
+        const breath = audible ? 1 + .025 * (.5 + .5 * Math.cos(beat * Math.PI * 2)) : 1;
+        const crowded = garden.objects.some((other) => other.id !== object.id &&
+          Math.hypot(other.world.x - object.world.x, other.world.y - object.world.y) < .17);
         return <button key={object.id} data-object={object.id} data-gain={(mix.get(object.id) ?? 0).toFixed(3)}
-          className={`garden-artwork ${audible ? "audible" : "resting"} ${selected === object.id ? "chosen" : ""}`}
-          style={{ left: object.world.x * 100 + "%", top: object.world.y * 100 + "%" }}
+          data-arrangement={transport.current.plan?.objectPlans.get(object.id)?.kind ?? "independent"}
+          className={`garden-artwork ${audible ? "audible" : "resting"} ${selected === object.id ? "chosen" : ""} ${bloom ? "placement-bloom" : ""} ${crowded ? "crowded" : ""}`}
+          style={{ left: object.world.x * 100 + "%", top: object.world.y * 100 + "%", "--ensemble-breath": breath } as CSSProperties}
           aria-label={t("{title} — {role}。矢印キーで移動", { title: object.title, role: t(roleNames[object.musicalRole]) })}
           onFocus={() => setSelected(object.id)} onKeyDown={(e) => keyboard(e, object.id, object.world)}>
           <span className="artwork-drawing" style={{ aspectRatio: object.project.canvasAspect, width: `min(100%, ${object.project.canvasAspect * 90}px)` }}><Artwork object={object} /></span>
@@ -173,6 +216,11 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     </div>
     {selectedObject && !pending && <div className="garden-selection"><span>{selectedObject.title} · {t(roleNames[selectedObject.musicalRole])}</span>
       <button onClick={() => { change({ ...stateRef.current, objects: stateRef.current.objects.filter((o) => o.id !== selected) }); setSelected(null); }}>{t("庭から取り除く")}</button></div>}
+    {leadRelation && relationNames[0] && relationNames[1] && <p className="ensemble-status" role="status">
+      {t(relationCopy[leadRelation.kind], { a: relationNames[0].title, b: relationNames[1].title })}
+      <span>{t("少し離すと、それぞれの歌に戻る。")}</span>
+    </p>}
+    {!pending && garden.objects.length > 0 && !leadRelation && <p className="ensemble-status">{t(curiosity)}</p>}
     {error && <p className="save-error" role="alert">{t(error)}</p>}
   </section>;
 }

@@ -1,9 +1,18 @@
 import { outputBus, voice } from "../music/audio";
 import type { GardenState, MusicalObject } from "./gardenState";
 import { mixGarden } from "./gardenMixer";
+import { buildEnsemblePlan, independentNotes } from "./ensemble";
+import type { ArrangementNote, EnsemblePlan, ObjectArrangementPlan } from "./ensemble";
 
-type Lane = { object: MusicalObject; gain: GainNode; next: number; phase: number; voices: Set<OscillatorNode> };
-/** One AudioContext clock and lookahead scheduler for the whole world. */
+type Layer = "free" | "ensemble";
+type Activity = { at: number; until: number; layer: Layer; pitch: number };
+type Lane = {
+  object: MusicalObject; gain: GainNode; free: GainNode; ensemble: GainNode;
+  next: number; phase: number; voices: Set<OscillatorNode>;
+  layerVoices: Record<Layer, Set<OscillatorNode>>;
+  notes: ArrangementNote[]; activity: Activity[];
+};
+/** One AudioContext, one scheduler, two persistent crossfaded buses per artwork. */
 export class GardenTransport {
   private ctx?: AudioContext;
   private master?: GainNode;
@@ -12,8 +21,17 @@ export class GardenTransport {
   private startTime = 0;
   private timer?: ReturnType<typeof setInterval>;
   private generation = 0;
+  private next = 0;
+  private planBeat = -1;
+  private currentPlan?: EnsemblePlan;
   running = false;
   get beat() { return this.running && this.ctx && this.state ? Math.max(0, (this.ctx.currentTime - this.startTime) * this.state.bpm / 60) : 0; }
+  get plan() { return this.currentPlan; }
+  isSounding(id: string) {
+    const lane = this.lanes.get(id), now = this.ctx?.currentTime ?? 0;
+    return !!(this.running && lane && lane.gain.gain.value > .015 &&
+      lane.activity.some((event) => event.at <= now && event.until > now && lane[event.layer].gain.value > .025));
+  }
   async start(state: GardenState) {
     this.stop();
     const generation = ++this.generation;
@@ -31,28 +49,40 @@ export class GardenTransport {
     if (this.running && this.state && this.ctx && this.state.bpm !== state.bpm) {
       const beat = this.beat;
       this.startTime = this.ctx.currentTime - beat * 60 / state.bpm;
-      // Cancel the short lookahead and old sustained tails when changing tempo.
+      this.next = Math.ceil(beat * 4 - .0001) / 4;
+      this.planBeat = -1;
       for (const lane of this.lanes.values()) {
-        lane.voices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
-        lane.voices.clear(); lane.next = Math.ceil(beat * 4 - 0.0001) / 4;
+        this.clearVoices(lane);
+        lane.free.gain.cancelScheduledValues(this.ctx.currentTime);
+        lane.ensemble.gain.cancelScheduledValues(this.ctx.currentTime);
       }
     }
     this.state = state;
     if (!this.ctx || !this.master || !this.running) return;
     const ids = new Set(state.objects.map((o) => o.id));
     for (const [id, lane] of this.lanes) if (!ids.has(id)) {
-      lane.voices.forEach((n) => { try { n.stop(); } catch { /* ended */ } });
-      lane.gain.disconnect(); this.lanes.delete(id);
+      this.clearVoices(lane);
+      lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect();
+      this.lanes.delete(id);
     }
     for (const object of state.objects) {
       const existing = this.lanes.get(object.id);
-      if (existing) existing.object = object;
-      else {
+      if (existing) {
+        if (existing.object.musicIR !== object.musicIR) existing.notes = independentNotes(object);
+        existing.object = object;
+      } else {
         const gain = this.ctx.createGain(); gain.gain.value = 0; gain.connect(this.master);
-        const entryBeat = Math.ceil(this.beat);
-        this.lanes.set(object.id, { object, gain, next: entryBeat, phase: entryBeat, voices: new Set() });
+        const free = this.ctx.createGain(), ensemble = this.ctx.createGain();
+        free.gain.value = 1; ensemble.gain.value = 0;
+        free.connect(gain); ensemble.connect(gain);
+        // Never insert into an already scheduled lookahead slice.
+        const entryBeat = Math.ceil(Math.max(this.beat, this.next));
+        this.lanes.set(object.id, { object, gain, free, ensemble, next: entryBeat, phase: entryBeat,
+          voices: new Set(), layerVoices: { free: new Set(), ensemble: new Set() },
+          notes: independentNotes(object), activity: [] });
       }
     }
+    // Movement only updates distance gain here. Arrangement enters at the next beat.
     this.applyMix();
   }
   private applyMix() {
@@ -60,37 +90,82 @@ export class GardenTransport {
     const mix = mixGarden(this.state, Math.floor(this.beat / 16));
     for (const [id, lane] of this.lanes) lane.gain.gain.setTargetAtTime(mix.get(id) ?? 0, this.ctx.currentTime, 0.12);
   }
+  private applyPlan(beat: number, at: number) {
+    if (!this.state || !this.ctx) return;
+    this.planBeat = Math.floor(beat);
+    const previous = this.currentPlan;
+    this.currentPlan = buildEnsemblePlan(this.state, mixGarden(this.state, Math.floor(beat / 16)), Math.floor(beat / 16));
+    for (const [id, lane] of this.lanes) {
+      const plan = this.currentPlan.objectPlans.get(id)!;
+      const window = Math.floor((beat % 16) / 4);
+      // Constant-sum crossfade prevents a volume boost when two renderings coexist.
+      lane.free.gain.setTargetAtTime(1 - plan.strength, at, .16);
+      lane.ensemble.gain.setTargetAtTime(plan.strength * plan.roleWeight *
+        (plan.activeWindows.includes(window) ? 1 : 0), at, .16);
+      const before = previous?.objectPlans.get(id);
+      const changed = !before || before.strength <= .001 || before.kind !== plan.kind ||
+        before.partnerIds.join() !== plan.partnerIds.join() || before.activeWindows.join() !== plan.activeWindows.join();
+      if (changed && plan.strength > .001 && beat >= lane.phase) {
+        const local = beat % 16;
+        // A bed joined mid-phrase must enter now, not wait silently for the next loop.
+        this.emit(lane, plan.notes.filter((n) => n.beat < local && n.beat + n.duration > local &&
+          !lane.activity.some((event) => event.layer === "ensemble" && event.pitch === n.pitch && event.at <= at && event.until > at + .1))
+          .map((n) => ({ ...n, duration: n.beat + n.duration - local })), "ensemble", at, 60 / this.state.bpm);
+      }
+    }
+  }
+  private emit(lane: Lane, notes: ArrangementNote[], layer: Layer, at: number, seconds: number) {
+    if (!this.ctx) return;
+    for (const note of notes) {
+      // Per-layer limits keep the quiet branch from stealing the answer's voices.
+      const harmonics = lane.object.project.instrument === "Pluck" || lane.object.project.instrument === "Soft Synth" ||
+        lane.object.musicalRole === "decoration" ? 2 : 3;
+      if (lane.layerVoices[layer].size + harmonics > 24) break;
+      const duration = lane.object.musicalRole === "rhythm" ? Math.min(.2, note.duration * seconds) : note.duration * seconds;
+      const nodes = voice(this.ctx, lane[layer], note.pitch, at, duration,
+        Math.min(.65, note.velocity), lane.object.musicalRole === "decoration" ? "Pluck" : lane.object.project.instrument);
+      lane.activity.push({ at, until: at + duration + .12, layer, pitch: note.pitch });
+      nodes.forEach((node) => {
+        lane.voices.add(node); lane.layerVoices[layer].add(node);
+        node.addEventListener("ended", () => { lane.voices.delete(node); lane.layerVoices[layer].delete(node); });
+      });
+    }
+  }
   private schedule() {
     if (!this.running || !this.ctx || !this.state) return;
     this.applyMix();
     const ctx = this.ctx, seconds = 60 / this.state.bpm;
-    const beat = this.beat, horizon = beat + 0.13 / seconds;
-    for (const lane of this.lanes.values()) {
-      // Quantize gently, retaining the spatial phrase; every object uses the same 16-beat cycle.
-      lane.next = Math.max(lane.next, Math.floor(beat * 4) / 4);
-      while (lane.next < horizon) {
-        const tick = ((Math.round((lane.next - lane.phase) * 4) % 64) + 64) % 64;
-        const first = lane.object.musicIR.playNotes[0]?.beat ?? 0;
-        const notes = lane.object.musicIR.playNotes.filter((n) => Math.min(63, Math.round((n.beat - first) * 4)) === tick).slice(0, 6);
-        const at = Math.max(ctx.currentTime, this.startTime + lane.next * seconds);
-        for (const note of notes) {
-          // A hard per-object voice ceiling bounds pathological dense scribbles, including tails.
-          if (lane.voices.size >= 24) break;
-          const duration = lane.object.musicalRole === "rhythm" ? Math.min(0.2, note.duration * seconds) : note.duration * seconds;
-          const nodes = voice(ctx, lane.gain, note.pitch, at, duration,
-            Math.min(0.65, note.velocity), lane.object.musicalRole === "decoration" ? "Pluck" : lane.object.project.instrument);
-          nodes.forEach((node) => { lane.voices.add(node); node.addEventListener("ended", () => lane.voices.delete(node)); });
+    const beat = this.beat, horizon = beat + .13 / seconds;
+    // A stalled frame skips expired subdivisions; it never produces a catch-up burst.
+    this.next = Math.max(this.next, Math.floor(beat * 4) / 4);
+    for (const lane of this.lanes.values()) lane.activity = lane.activity.filter((event) => event.until > ctx.currentTime);
+    while (this.next < horizon) {
+      const at = Math.max(ctx.currentTime, this.startTime + this.next * seconds);
+      if (Math.floor(this.next) !== this.planBeat) this.applyPlan(this.next, at);
+      const tick = Math.round(this.next * 4) % 64;
+      for (const [id, lane] of this.lanes) {
+        if (this.next < lane.phase) continue;
+        const freeTick = ((Math.round((this.next - lane.phase) * 4) % 64) + 64) % 64;
+        this.emit(lane, lane.notes.filter((n) => Math.round(n.beat * 4) === freeTick), "free", at, seconds);
+        const plan: ObjectArrangementPlan | undefined = this.currentPlan?.objectPlans.get(id);
+        if (plan && plan.strength > .001) {
+          this.emit(lane, plan.notes.filter((n) => Math.round(n.beat * 4) === tick), "ensemble", at, seconds);
         }
-        lane.next += 0.25;
+        lane.next = this.next + .25;
       }
+      this.next += .25;
     }
+  }
+  private clearVoices(lane: Lane) {
+    lane.voices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
+    lane.voices.clear(); lane.layerVoices.free.clear(); lane.layerVoices.ensemble.clear(); lane.activity = [];
   }
   stop() {
     this.generation++; this.running = false; clearInterval(this.timer);
     for (const lane of this.lanes.values()) {
-      lane.voices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
-      lane.gain.disconnect();
+      this.clearVoices(lane);
+      lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect();
     }
-    this.lanes.clear();
+    this.lanes.clear(); this.next = 0; this.planBeat = -1; this.currentPlan = undefined;
   }
 }
