@@ -34,8 +34,10 @@ async (page) => {
   await page.reload();
   await page.locator(".space-nav").getByRole("button", {name:"GARDEN",exact:true}).click();
   assert(await page.locator("[data-growth-object]").count() === 12, "habitat bound");
-  assert(await page.locator("[data-growth-pair]").count() === 24, "path bound");
-  assert(await page.locator(".growth-habitat > *").count() === 96, "primitive bound");
+  const paths = await page.locator("[data-growth-pair]").count();
+  assert(paths > 0 && paths <= 24, "path bound");
+  const primitives = await page.locator(".growth-habitat > *").count();
+  assert(primitives > 0 && primitives <= 96, "primitive bound");
   const shape = await page.getByTestId("growth-layer").innerHTML();
   await page.reload();
   await page.locator(".space-nav").getByRole("button", {name:"GARDEN",exact:true}).click();
@@ -50,5 +52,5 @@ async (page) => {
   await page.screenshot({path:"output/playwright/grow-dense-mobile.png",fullPage:true});
   await page.setViewportSize({width:1440,height:900});
   await page.screenshot({path:"output/playwright/grow-dense-desktop.png",fullPage:true});
-  return {firstUse:true, japaneseEnglish:true, habitats:12, paths:24, primitives:96, deterministic:true};
+  return {firstUse:true, japaneseEnglish:true, habitats:12, paths, primitives, deterministic:true};
 }

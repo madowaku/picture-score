@@ -29,6 +29,14 @@ async (page) => {
     };
     prototype.start = function (...args) {
       window.ensembleQA.starts++; window.ensembleQA.engine = this;
+      if (!this.ensembleLifeObserved) {
+        this.ensembleLifeObserved = true;
+        const observer = this.onLifeEvent;
+        this.onLifeEvent = event => {
+          observer?.(event);
+          if (event && ['note','sustain-start','tap'].includes(event.type)) window.ensembleQA.firstAudible[event.objectId] ??= performance.now();
+        };
+      }
       return start.apply(this, args);
     };
     prototype.applyPlan = function (...args) {
@@ -52,10 +60,10 @@ async (page) => {
     await field.click({ position: { x: box.width * x, y: box.height * .4 } });
     await page.waitForFunction((count) => {
       const objects = document.querySelectorAll(".garden-artwork[data-object]");
-      return objects.length === count && objects[count - 1].classList.contains("placement-bloom");
+      return objects.length === count && objects[count - 1].hasAttribute("data-life");
     }, ++placed);
     assert(await page.locator(".garden-artwork[data-object]").last().evaluate((el) =>
-      performance.now() - window.ensembleQA.firstAudible[el.dataset.object] < 1000), "bloom was not synchronized with first sound");
+      performance.now() - window.ensembleQA.firstAudible[el.dataset.object] < 1000), "inhabitant response was not synchronized with first sound");
   }
   await page.waitForFunction(() => JSON.parse(localStorage.getItem("picture-score:garden:v1") || "{}").objects?.length === 2);
   const sources = () => page.evaluate(() => JSON.parse(localStorage.getItem("picture-score:garden:v1")).objects.map((o) => ({

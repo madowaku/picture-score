@@ -7,6 +7,8 @@ import type { HeardSlice } from "./growth";
 import { gardenRelations, StableGardenRelations } from "../wonder/gardenRelations";
 import { applyGardenWonder } from "../wonder/gardenMusic";
 import type { WonderGardenEffect } from "../wonder/wonderTypes";
+import { GardenLifeBridge } from './life';
+import type { GardenLifeEvent } from './life';
 
 type Layer = "free" | "ensemble";
 type Activity = { at: number; until: number; layer: Layer; pitch: number };
@@ -36,6 +38,17 @@ export class GardenTransport {
   private spotlightId?: string;
   private spotlightUntil = -1;
   onHeard?: (slice: HeardSlice | null) => void;
+  private life = new GardenLifeBridge();
+  get onLifeEvent() { return this.life.onEvent; }
+  set onLifeEvent(listener: ((event: GardenLifeEvent | null) => void) | undefined) { this.life.onEvent = listener; }
+  private startLife() {
+    this.life.start(() => this.ctx!.currentTime, event => {
+      if (!this.running || document.hidden || this.ctx?.state !== 'running') return false;
+      const lane = this.lanes.get(event.objectId);
+      return !!lane && (event.type === 'tap' || event.type === 'spotlight' ||
+        lane.gain.gain.value * (event.layer ? lane[event.layer].gain.value : 1) > .015);
+    });
+  }
   running = false;
   get beat() { return this.running && this.ctx && this.state ? Math.max(0, (this.ctx.currentTime - this.startTime) * this.state.bpm / 60) : 0; }
   get plan() { return this.currentPlan; }
@@ -53,6 +66,7 @@ export class GardenTransport {
     this.state = state;
     this.startTime = this.ctx.currentTime + 0.06;
     this.running = true;
+    this.startLife();
     this.update(state);
     this.schedule();
     this.timer = setInterval(() => this.schedule(), 25);
@@ -63,6 +77,7 @@ export class GardenTransport {
       this.startTime = this.ctx.currentTime - beat * 60 / state.bpm;
       this.next = Math.ceil(beat * 4 - .0001) / 4;
       this.planBeat = -1;
+      this.startLife();
       for (const lane of this.lanes.values()) {
         this.clearVoices(lane);
         lane.free.gain.cancelScheduledValues(this.ctx.currentTime);
@@ -73,6 +88,7 @@ export class GardenTransport {
     if (!this.ctx || !this.master || !this.running) return;
     const ids = new Set(state.objects.map((o) => o.id));
     for (const [id, lane] of this.lanes) if (!ids.has(id)) {
+      this.life.remove(id);
       this.clearVoices(lane);
       lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect();
       this.lanes.delete(id);
@@ -135,6 +151,8 @@ export class GardenTransport {
           Math.min(.18, Math.max(.08, note.duration * seconds * .55)),
           Math.min(.32, note.velocity * .55),
           lane.object.musicalRole === "decoration" ? "Pluck" : lane.object.project.instrument);
+        this.life.enqueue({ objectId: lane.object.id, type: 'tap', at: start, beat: (start - this.startTime) / seconds,
+          pitch: note.pitch, velocity: Math.min(.32, note.velocity * .55), duration: .18, role: lane.object.musicalRole, source: note.life });
         nodes.forEach((node) => {
           this.tapVoices.add(node);
           node.addEventListener("ended", () => this.tapVoices.delete(node));
@@ -148,6 +166,9 @@ export class GardenTransport {
     if (!this.state?.objects.some((object) => object.id === id)) return;
     this.spotlightId = id;
     this.spotlightUntil = this.beat + Math.max(1, beats);
+    const object = this.state.objects.find(o => o.id === id)!;
+    this.life.enqueue({ objectId: id, type: 'spotlight', at: this.ctx?.currentTime ?? 0, beat: this.beat,
+      duration: Math.max(1, beats) * 60 / this.state.bpm, role: object.musicalRole });
     this.applyMix();
   }
   private applyPlan(beat: number, at: number) {
@@ -165,6 +186,8 @@ export class GardenTransport {
       const before = previous?.objectPlans.get(id);
       const changed = !before || before.strength <= .001 || before.kind !== plan.kind || before.wonder !== plan.wonder ||
         before.partnerIds.join() !== plan.partnerIds.join() || before.activeWindows.join() !== plan.activeWindows.join();
+      if (changed && plan.strength > .35) this.life.enqueue({ objectId: id, type: "relation", at, beat, duration: .45,
+        role: lane.object.musicalRole, layer: "ensemble", relation: plan.kind, partnerId: plan.partnerIds[0] });
       if (changed && plan.strength > .001 && beat >= lane.phase) {
         const local = beat % 16;
         // A bed joined mid-phrase must enter now, not wait silently for the next loop.
@@ -184,6 +207,15 @@ export class GardenTransport {
       const duration = lane.object.musicalRole === "rhythm" ? Math.min(.2, note.duration * seconds) : note.duration * seconds;
       const nodes = voice(this.ctx, lane[layer], note.pitch, at, duration,
         Math.min(.65, note.velocity), lane.object.musicalRole === "decoration" ? "Pluck" : lane.object.project.instrument);
+      const plan = layer === 'ensemble' ? this.currentPlan?.objectPlans.get(lane.object.id) : undefined;
+      const anchor = note.life ?? (() => {
+        const source = lane.object.scoreIR.reduce<(typeof lane.object.scoreIR)[number] | undefined>((best, candidate) =>
+          !best || Math.abs(candidate.pitch - note.pitch) < Math.abs(best.pitch - note.pitch) ? candidate : best, undefined);
+        return source ? { strokeId: source.sourceStroke, point: source.sourcePosition } : undefined;
+      })();
+      this.life.enqueue({ objectId: lane.object.id, type: duration >= .6 ? 'sustain-start' : 'note', at,
+        beat: (at - this.startTime) / seconds, pitch: note.pitch, velocity: Math.min(.65, note.velocity), duration,
+        role: lane.object.musicalRole, layer, source: anchor, relation: plan?.kind, partnerId: plan?.partnerIds[0], formation: note.formation });
       lane.activity.push({ at, until: at + duration + .12, layer, pitch: note.pitch });
       nodes.forEach((node) => {
         lane.voices.add(node); lane.layerVoices[layer].add(node);
@@ -244,6 +276,7 @@ export class GardenTransport {
       }) });
   }
   stop() {
+    this.life.clear();
     this.generation++; this.running = false; clearInterval(this.timer);
     for (const lane of this.lanes.values()) {
       this.clearVoices(lane);

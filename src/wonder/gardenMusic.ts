@@ -26,7 +26,7 @@ export function applyGardenWonder(base: EnsemblePlan, state: GardenState, effect
     const strength = original.strength * (1 - effect.strength) + effect.strength;
     const blend = [
       ...original.notes.filter(n => original.activeWindows.includes(Math.floor(n.beat / 4))).map(n => ({ ...n, velocity: n.velocity * original.roleWeight * original.strength * (1 - effect.strength) / strength })),
-      ...notes.map(n => ({ ...n, velocity: n.velocity * effect.strength / strength })),
+      ...notes.map(n => ({ ...n, formation: effect.rule, velocity: n.velocity * effect.strength / strength })),
     ].filter(n => n.velocity > .005);
     objectPlans.set(id, { ...original, strength, roleWeight: 1, wonder: effect.rule + ':' + slot,
       partnerIds: effect.objectIds.filter(other => other !== id), activeWindows: [0, 1, 2, 3], notes: blend });

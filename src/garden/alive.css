@@ -1,0 +1,56 @@
+/* ALIVE: the line drawing is the inhabitant; the generated watercolor is only ground. */
+.garden-field { background: linear-gradient(#fffdf52b,#fffdf52b), url('/art/alive-watercolor-garden.webp') center / cover; isolation:isolate; }
+.garden-landscape { opacity:.16; z-index:0; }
+.growth-layer { z-index:1; }
+.ensemble-links { z-index:2; opacity:.1; }
+.garden-life-layer { position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:2;overflow:visible; }
+.garden-life-layer circle { fill:#fff0a022;stroke:#d4a650;stroke-width:2;vector-effect:non-scaling-stroke;opacity:0; }
+.garden-life-layer path { fill:none;stroke:#d3a13d;stroke-width:3;stroke-linecap:round;stroke-dasharray:12 88;vector-effect:non-scaling-stroke;opacity:0; }
+.garden-life-layer [data-life-formation="garden-triad-round"] circle {stroke:#8671b2;}
+.inhabitant.garden-artwork { z-index:3;width:clamp(70px,12vw,142px);height:clamp(68px,11vw,124px);min-width:44px;min-height:44px;padding:7px;display:flex;align-items:center;justify-content:center;border:0;border-radius:50%;background:none;box-shadow:none;isolation:isolate; }
+.inhabitant.garden-artwork.audible,.inhabitant.garden-artwork.chosen,.inhabitant.garden-artwork.wonder-leading {background:none;box-shadow:none;}
+.inhabitant.garden-artwork.chosen {outline:0;}
+.inhabitant.garden-artwork:before {content:"";position:absolute;inset:2px;border:1px solid transparent;border-radius:50%;opacity:0;pointer-events:none;box-shadow:none;}
+.inhabitant.garden-artwork.near-listener:before {border-color:transparent;box-shadow:none;}
+.inhabitant.garden-artwork.chosen:before,.inhabitant.garden-artwork:focus-visible:before {opacity:.65;border:1px dashed var(--art-color);}
+.inhabitant .artwork-drawing {width:100%;height:100%;display:flex;align-items:center;justify-content:center;max-height:none;transform:none;transition:none;transform-origin:50% 80%;}
+.inhabitant.pressed .artwork-drawing {transform:scale(.93,.9);transition:transform .09s;}
+.inhabitant-svg {display:block;width:auto;height:auto;overflow:visible;max-height:100% !important;}
+.inhabitant-ink path {fill:none;stroke:currentColor;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
+.inhabitant:not(.near-listener):not([data-life]) .inhabitant-ink {opacity:.56;}
+.inhabitant .inhabitant-label {position:absolute;top:100%;left:50%;transform:translateX(-50%);max-width:150px;min-width:65px;padding:3px 8px;background:#fffdf2dd;border-radius:10px;opacity:0;pointer-events:none;transition:opacity .18s;}
+.inhabitant.chosen .inhabitant-label,.inhabitant:focus-visible .inhabitant-label {opacity:1;}
+.inhabitant-label .artwork-title {margin:0;font-size:10px;color:#435a49;}.inhabitant-label small {font-size:8px;margin-top:1px;}
+.life-ring {position:absolute;inset:-3px;border:2px solid var(--art-color);border-radius:48% 52% 46% 54%;opacity:0;pointer-events:none;}
+.inhabitant[data-life="sustain-start"]:after {content:"";position:absolute;inset:0;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--art-color) 16%,transparent),transparent 70%);pointer-events:none;z-index:-1;}
+.inhabitant.life-spotlight:before,.inhabitant.spotlight-lead:before {opacity:1;border:2px solid #deaa36;box-shadow:0 0 0 6px #ffe79766;}
+.inhabitant[data-life-formation] .inhabitant-ink {filter:drop-shadow(0 0 3px #ecbd56);}
+.inhabitant[data-life-relation="call-response"] .life-ring {border-style:dashed;}
+.inhabitant[data-life-relation="support"] .life-ring,.inhabitant[data-life-relation="shared-bed"] .life-ring {border-radius:38% 62% 43% 57%;border-color:#86a957;}
+.life-anchor {fill:#ffd063;stroke:#fff7c9;stroke-width:1.4;vector-effect:non-scaling-stroke;opacity:0;pointer-events:none;}
+.life-contour {fill:none;stroke:#eebc43;stroke-width:4;stroke-linecap:round;stroke-dasharray:16 84;vector-effect:non-scaling-stroke;opacity:0;pointer-events:none;}
+.life-spark {fill:none;stroke:#e4a81d;stroke-width:2.5;stroke-linecap:round;vector-effect:non-scaling-stroke;opacity:0;pointer-events:none;}
+.garden-artwork[data-life-side="answer"] .life-anchor {fill:#ac92e3;stroke:#ece1ff;}
+.growth-habitat {opacity:.8;stroke:#6c9a57;fill:#b8d28770;stroke-width:1.5;transform-box:fill-box;transform-origin:center;}
+.growth-harmony {fill:#edbd8b70;stroke:#c7974d;}.growth-drone {fill:none;stroke:#729882;}.growth-rhythm {fill:#a99948;stroke:#9d8540;}.growth-decoration {fill:#d4af5370;stroke:#b5903b;}
+[data-growth-stage="1"] .growth-habitat {stroke-width:2;opacity:.85;}
+[data-growth-stage="2"] .growth-habitat {opacity:.82;}[data-growth-stage="3"] .growth-habitat {stroke-width:1.7;opacity:.9;}
+.growth-path {stroke:#8e9f71;stroke-width:2.5;stroke-dasharray:2 7;stroke-linecap:round;opacity:.48;}
+.growth-layer:has([data-growth-object]:nth-last-child(n+7)) .growth-path {opacity:.2;stroke-width:2;}
+.garden-listener {z-index:5;background:#fffef4ed;color:#377f88;border:2px solid #82b6bc;box-shadow:0 4px 16px #7aab9730;}
+.garden-listener.listening .listener-orb {animation:none;}
+.garden-view .garden-landmark {color:#758b65;z-index:1;opacity:.7;}
+@media(max-width:760px) {
+ .inhabitant.garden-artwork {width:74px;height:76px;padding:6px;}
+ .inhabitant-ink path {stroke-width:1.9;}
+ .garden-field {height:500px;}
+ .garden-intro {padding-block:24px;}
+ .garden-selection {padding:8px 0;}
+ .garden-selection-actions {gap:12px;}
+}
+@media(prefers-reduced-motion:reduce) {
+ .inhabitant *, .growth-layer *, .garden-listener *, .ensemble-links * {animation:none !important;transition:none !important;}
+ .inhabitant.pressed .artwork-drawing {transform:none;}
+ .inhabitant.pressed:before,.inhabitant[data-life]:before {opacity:1;border:2px solid var(--art-color);}
+ .life-contour {stroke-dasharray:none;}
+}

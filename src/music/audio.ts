@@ -124,6 +124,7 @@ export class AudioEngine {
   private bus?: GainNode;
   private voices = new Set<OscillatorNode>();
   private timer?: ReturnType<typeof setInterval>;
+  private answerGeneration = 0;
   private lastPreview = -Infinity;
   private lastPitch = -1;
   private settleBuffer?: AudioBuffer;
@@ -208,8 +209,10 @@ export class AudioEngine {
     );
   }
   /** A compact call-and-response for one completed stroke. */
-  async answer(music: MusicIR, instrument: Instrument): Promise<number> {
+  async answer(music: MusicIR, instrument: Instrument, onNote?: (note: { pitch: number; velocity: number; duration: number; at: number; anchorId: string }) => void): Promise<number> {
+    const generation = ++this.answerGeneration;
     await this.unlock();
+    if (generation !== this.answerGeneration) return 0;
     this.stop();
     if (!music.playNotes.length) return 0;
     const ctx = this.ctx!, bus = this.bus!;
@@ -236,6 +239,7 @@ export class AudioEngine {
       this.track(
         voice(ctx, bus, note.pitch, start + offset, duration, note.velocity * 0.88, instrument),
       );
+      try { onNote?.({ pitch: note.pitch, velocity: note.velocity * .88, duration, at: start + offset, anchorId: note.anchorId }); } catch { /* Observation only. */ }
     });
     return phraseSeconds + 0.9;
   }
@@ -281,6 +285,7 @@ export class AudioEngine {
     return this.ctx?.currentTime ?? 0;
   }
   stop() {
+    this.answerGeneration++;
     clearInterval(this.timer);
     this.voices.forEach((node) => {
       try {

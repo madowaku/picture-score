@@ -1,6 +1,6 @@
-# Picture Score v0.5 — WONDER
+# Picture Score v0.6.1 — CLEARING
 
-**Every shape hides a musical secret.** かたちの中に、音のひみつ。
+**Growth frames the drawing, never covers it.** 育つほど、絵に居場所ができる。
 
 指やマウスで描いた絵を、左から右へ読む小さな楽器。AIやサーバーなしで動く、アイデア検証用のブラウザプロトタイプです。
 
@@ -22,6 +22,10 @@ npm run preview
 ```
 
 ## できること
+
+- v0.6.1 CLEARING：画像生成した芽・草・種・星・花が、絵の周りで育つ。作品ごとの余白を守り、関係の道もその縁につながる。[実装と生成素材・検証](docs/clearing-implementation.md)
+
+- v0.6 ALIVE：実際の発音に合わせて線画が歌い、跳ね、ひらく。長押しSpotlight、WONDERの局所的な光、水彩の地面と育つ足元。[実装と生成素材・検証](docs/alive-implementation.md)
 
 - v0.5 WONDER：閉じる・なぞる・交差・左右対称から音が変わり、Gardenの一列・三角形で音が巡る。6色の線と短い反応、答えを明かさない日英ヒント。[実装と検証](docs/wonder-implementation.md)
 

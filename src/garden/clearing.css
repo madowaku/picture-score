@@ -1,0 +1,14 @@
+/* CLEARING: generated pigment belongs around the drawing, never under its ink. */
+.growth-habitat { opacity:.8; fill:none; stroke:none; }
+[data-growth-stage] .growth-habitat { opacity:.8; }
+.growth-habitat image { pointer-events:none; }
+.growth-layer .growth-path { fill:none; stroke:#859b70; stroke-width:1.4; stroke-dasharray:1 7; opacity:.42; }
+.growth-layer:has([data-growth-object]:nth-last-child(n+7)) .growth-path { stroke-width:1.2; opacity:.23; }
+.growth-layer .growth-moment { animation:clearing-brighten 550ms ease-out; transform:none; }
+@keyframes clearing-brighten { 0% {opacity:.55;} 45% {opacity:1;} }
+.garden-life-layer [data-life-world] ellipse { fill:none;stroke:#d4a650;stroke-width:1.4;vector-effect:non-scaling-stroke;opacity:0; }
+.garden-life-layer [data-life-formation="garden-triad-round"] ellipse { stroke:#8671b2; }
+/* Luminance masks must stay opaque regardless of general SVG mark/light styles. */
+.growth-layer mask ellipse,.garden-life-layer mask ellipse,.ensemble-links mask ellipse { fill:black;stroke:none;opacity:1; }
+.growth-layer mask rect,.garden-life-layer mask rect,.ensemble-links mask rect { fill:white;stroke:none;opacity:1; }
+@media(prefers-reduced-motion:reduce) { .growth-layer .growth-moment {animation:none;} }

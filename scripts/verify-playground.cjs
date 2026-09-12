@@ -33,16 +33,16 @@ async (page) => {
   assert(await page.locator(".garden-field.place-pulse").count() === 1, "place pulse missing");
   const work = page.locator(".garden-artwork[data-object]").first();
   await work.click();
-  await page.waitForTimeout(120);
-  assert(await page.locator(".garden-artwork.answer-pulse").count() === 1, "tap pulse missing");
+  await page.waitForFunction(() => document.querySelector(".garden-artwork[data-life]"));
+  assert(await page.locator(".garden-artwork[data-life]").count() === 1, "audible tap response missing");
   assert(await page.locator(".garden-selection-actions").isVisible(), "selection actions missing");
   await page.getByRole("button",{name:"ひときわ聴く",exact:true}).click();
   assert(await page.locator(".garden-artwork.spotlight-lead").count() === 1, "spotlight visual missing");
   await page.getByRole("button",{name:"音を休める",exact:true}).click();
   // A stopped garden answers immediately through its short audition engine.
   await work.click();
-  await page.waitForTimeout(120);
-  assert(await page.locator(".garden-artwork.answer-pulse").count() === 1, "stopped tap pulse missing");
+  await page.waitForFunction(() => document.querySelector(".garden-artwork[data-life]"));
+  assert(await page.locator(".garden-artwork[data-life]").count() === 1, "stopped audible response missing");
   await page.waitForTimeout(400);
   assert(!errors.length, errors.join(";"));
   for (const [width, height] of [[360,800],[390,844],[720,1280]]) {

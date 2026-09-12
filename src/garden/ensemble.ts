@@ -1,12 +1,14 @@
 import type { PlayNote, MusicIR } from "../music/types";
 import { applyDrawWonder } from "../wonder/drawMusic";
 import { drawRelations } from "../wonder/drawRelations";
+import type { LifeSource } from "./life";
+import type { WonderRuleId } from "../wonder/wonderTypes";
 const performances = new WeakMap<MusicIR, MusicIR>();
 import type { GardenState, MusicalObject, Position } from "./gardenState";
 
 export type RelationKind = "call-response" | "support" | "pulse-fill" | "sparkle-fill" | "shared-bed";
 export interface EnsembleRelation { a: string; b: string; strength: number; kind: RelationKind }
-export interface ArrangementNote { pitch: number; beat: number; duration: number; velocity: number }
+export interface ArrangementNote { pitch: number; beat: number; duration: number; velocity: number; life?: LifeSource; formation?: WonderRuleId }
 export interface ObjectArrangementPlan {
   wonder?: string;
   strength: number;
@@ -36,10 +38,24 @@ export function independentNotes(object: MusicalObject): ArrangementNote[] {
     performances.set(object.musicIR, performance);
   }
   const first = performance.playNotes[0]?.beat ?? 0;
+  const effects = drawRelations(object.strokeIR);
+  const sources = new Map(object.scoreIR.map(n => [n.id, n]));
   return boundNotes(performance.playNotes.map((n) => ({
     pitch: n.pitch, beat: Math.min(15.75, quarter(n.beat - first)),
     duration: n.duration,
     velocity: Math.min(.65, n.velocity),
+    life: (() => {
+      const anchor = sources.get(n.anchorId);
+      if (!anchor) return undefined;
+      const related = effects.filter(e => e.strokeIds.includes(anchor.sourceStroke));
+      const spark = n.id.startsWith('spark:') ? related.find(e => e.rule === 'crossing-spark' && Math.abs(e.position.x * .016 - n.beat) < .01) : undefined;
+      const mirror = related.find(e => e.rule === 'mirror-answer');
+      return { strokeId: anchor.sourceStroke, point: { ...anchor.sourcePosition },
+        loop: n.id.includes(':loop') ? 1 : undefined,
+        thicken: related.find(e => e.rule === 'retrace-thicken')?.stage,
+        spark: spark?.position,
+        mirror: mirror ? anchor.sourcePosition.x > mirror.position.x ? 'answer' as const : 'question' as const : undefined };
+    })(),
   })));
 }
 /** Deterministic density/voice ceiling, including duplicate pitches in scribbles. */
