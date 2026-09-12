@@ -4,19 +4,20 @@ async (page) => {
   // Use the dedicated 'garden' QA browser, never a user's browsing session.
   await page.evaluate(() => localStorage.removeItem('picture-score:garden:v1'));
   await page.reload();
+  await page.getByRole('combobox', { name: 'Language / 言語' }).selectOption('ja');
   await page.setViewportSize({ width: 1440, height: 900 });
   const nav = page.getByRole('navigation', { name: '制作スペース' });
   await nav.getByRole('button', { name: 'DRAW', exact: true }).click();
-  await page.getByRole('button', { name: 'Wave', exact: true }).click();
-  await page.getByRole('button', { name: 'PLACE IN GARDEN', exact: true }).click();
+  await page.getByRole('button', { name: '波', exact: true }).click();
+  await page.getByRole('button', { name: '庭に置く', exact: true }).click();
   const field = page.getByTestId('garden-field');
   await field.click({ position: { x: 280, y: 180 } });
   await page.waitForFunction(() => document.querySelectorAll('.garden-artwork[data-object]').length === 1);
   assert(await page.getByRole('button', { name: '音を休める', exact: true }).isVisible(), 'placement did not start transport');
   await nav.getByRole('button', { name: 'DRAW', exact: true }).click();
   assert(await page.locator('[data-stroke]').count() > 0, 'DRAW lost its source');
-  await page.getByRole('button', { name: 'Cat', exact: true }).click();
-  await page.getByRole('button', { name: 'PLACE IN GARDEN', exact: true }).click();
+  await page.getByRole('button', { name: '猫', exact: true }).click();
+  await page.getByRole('button', { name: '庭に置く', exact: true }).click();
   await field.click({ position: { x: 750, y: 270 } });
   await page.waitForFunction(() => document.querySelectorAll('.garden-artwork[data-object]').length === 2);
   await page.getByRole('button', { name: '音を休める', exact: true }).click();
@@ -95,7 +96,7 @@ async (page) => {
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'mobile horizontal overflow');
   await nav.getByRole('button', { name: 'DRAW', exact: true }).click();
   assert(await page.getByTestId('score-canvas').isVisible(), 'return to DRAW failed');
-  await page.getByRole('button', { name: 'PLACE IN GARDEN', exact: true }).click();
+  await page.getByRole('button', { name: '庭に置く', exact: true }).click();
   await field.scrollIntoViewIfNeeded();
   const r2 = await field.boundingBox();
   await touch('touchStart', [{ x: r2.x + r2.width * .65, y: r2.y + r2.height * .6, id: 1 }]);

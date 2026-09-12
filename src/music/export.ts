@@ -1,5 +1,7 @@
 import type { Instrument, MusicIR, Project, ScoreNote } from "./types";
 import { HEIGHT, WIDTH } from "./score";
+import { translate } from "../i18n/messages";
+import type { Language } from "../i18n/messages";
 
 export function download(blob: Blob, title: string, extension: string) {
   const url = URL.createObjectURL(blob),
@@ -127,6 +129,7 @@ export function midiFile(
 export async function pictureFile(
   project: Project,
   notes: ScoreNote[],
+  language: Language = "ja",
 ): Promise<Blob> {
   const canvas = document.createElement("canvas");
   const pageHeight = 1000 / project.canvasAspect + 140;
@@ -141,7 +144,7 @@ export async function pictureFile(
   ctx.fillText(project.title, 38, 51);
   ctx.fillStyle = "#77776e";
   ctx.font = "11px sans-serif";
-  ctx.fillText("PICTURE SCORE  /  Draw it. Hear it.", 38, pageHeight - 29);
+  ctx.fillText("PICTURE SCORE  /  " + translate(language, "Every stroke answers back."), 38, pageHeight - 29);
   ctx.save();
   ctx.translate(25, 85);
   ctx.scale(0.95, (0.95 * (1000 / project.canvasAspect)) / HEIGHT);

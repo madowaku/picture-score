@@ -8,6 +8,7 @@ import type { MusicalObject, Position } from "./gardenState";
 import { mixGarden } from "./gardenMixer";
 import { GardenTransport } from "./gardenTransport";
 import "./garden.css";
+import { useLanguage } from "../i18n/LanguageContext";
 
 const roleNames = { melody: "うた", harmony: "和音", drone: "余韻", rhythm: "リズム", decoration: "きらめき" };
 const path = (s: Stroke) => s.points.map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`).join(" ") + (s.points.length === 1 ? "l0.1,0" : "");
@@ -21,6 +22,7 @@ function Artwork({ object }: { object: MusicalObject }) {
 export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   active: boolean; seed: Project | null; onSeedPlaced: () => void; onDraw: () => void;
 }) {
+  const { t } = useLanguage();
   const [loaded] = useState(loadGarden);
   const [garden, setGarden] = useState(loaded.state);
   const stateRef = useRef(garden);
@@ -124,19 +126,19 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     event.preventDefault(); event.stopPropagation();
     moveTarget(target, { x: clamp(p.x + delta[event.key].x, 0.06, 0.94), y: clamp(p.y + delta[event.key].y, 0.08, 0.92) });
   }
-  return <section className="garden-view" hidden={!active} aria-label="Garden 音の庭">
+  return <section className="garden-view" hidden={!active} aria-label={t("Garden 音の庭")}>
     <div className="garden-intro"><div><p className="eyebrow"><Sprout size={14} /> PICTURE SCORE GARDEN · 01</p>
-      <h1>Give your song <em>a place.</em></h1><p className="intro-copy">絵を置いて、音のあいだを歩こう。</p></div>
-      <span className="garden-count">{garden.objects.length} / {MAX_OBJECTS}<small>sounds growing</small></span></div>
+      <h1>{t("Give your song ")}<em>{t("a place.")}</em></h1><p className="intro-copy">{t("絵を置いて、音のあいだを歩こう。")}</p></div>
+      <span className="garden-count">{garden.objects.length} / {MAX_OBJECTS}<small>{t("sounds growing")}</small></span></div>
     <div className="garden-toolbar">
       <button className="garden-listen" disabled={!garden.objects.length || starting} onClick={() => {
         if (playing || starting) { transport.current.stop(); setPlaying(false); setStarting(false); } else void listen();
-      }}>{playing ? <Square size={14} /> : <Play size={14} />}{starting ? "準備中…" : playing ? "音を休める" : "庭を聴く"}</button>
-      <label className="garden-tempo">BPM <select aria-label="庭のテンポ" value={garden.bpm}
+      }}>{playing ? <Square size={14} /> : <Play size={14} />}{starting ? t("準備中…") : playing ? t("音を休める") : t("庭を聴く")}</button>
+      <label className="garden-tempo">BPM <select aria-label={t("庭のテンポ")} value={garden.bpm}
         onChange={(e) => change({ ...stateRef.current, bpm: Number(e.target.value) })}>
         {[72, 88, 104, 120, 140, ...([72, 88, 104, 120, 140].includes(garden.bpm) ? [] : [garden.bpm])].map((bpm) => <option key={bpm}>{bpm}</option>)}
-      </select></label><span className="garden-key">C pentatonic</span>
-      <span className="garden-clock" aria-label="共通の拍" data-beat={beat.toFixed(2)}>{[0, 1, 2, 3].map((n) =>
+      </select></label><span className="garden-key">{t("C pentatonic")}</span>
+      <span className="garden-clock" aria-label={t("共通の拍")} data-beat={beat.toFixed(2)}>{[0, 1, 2, 3].map((n) =>
         <i key={n} className={playing && Math.floor(beat) % 4 === n ? "lit" : ""} />)}</span>
     </div>
     <div ref={field} className={`garden-field ${pending ? "placing" : ""}`} data-testid="garden-field"
@@ -146,31 +148,31 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         <path d="M-30 590C140 620 110 370 325 350S470 140 660 220 740 480 1040 345" />
         <ellipse cx="805" cy="123" rx="84" ry="30" /><ellipse cx="155" cy="490" rx="65" ry="23" />
       </svg>
-      <span className="garden-landmark north">THE QUIET CORNER</span><span className="garden-landmark south">ROOM FOR ANOTHER SONG</span>
-      {!garden.objects.length && !pending && <div className="garden-empty"><Sprout size={30} /><p>まだ静かな、小さな庭。</p><span>ひと筆描いて、最初の音を植えてみよう。</span></div>}
+      <span className="garden-landmark north">{t("THE QUIET CORNER")}</span><span className="garden-landmark south">{t("ROOM FOR ANOTHER SONG")}</span>
+      {!garden.objects.length && !pending && <div className="garden-empty"><Sprout size={30} /><p>{t("まだ静かな、小さな庭。")}</p><span>{t("ひと筆描いて、最初の音を植えてみよう。")}</span></div>}
       {garden.objects.map((object) => {
         const audible = playing && (mix.get(object.id) ?? 0) > 0.015;
         return <button key={object.id} data-object={object.id} data-gain={(mix.get(object.id) ?? 0).toFixed(3)}
           className={`garden-artwork ${audible ? "audible" : "resting"} ${selected === object.id ? "chosen" : ""}`}
           style={{ left: object.world.x * 100 + "%", top: object.world.y * 100 + "%" }}
-          aria-label={object.title + " — " + roleNames[object.musicalRole] + "。矢印キーで移動"}
+          aria-label={t("{title} — {role}。矢印キーで移動", { title: object.title, role: t(roleNames[object.musicalRole]) })}
           onFocus={() => setSelected(object.id)} onKeyDown={(e) => keyboard(e, object.id, object.world)}>
           <span className="artwork-drawing" style={{ aspectRatio: object.project.canvasAspect, width: `min(100%, ${object.project.canvasAspect * 90}px)` }}><Artwork object={object} /></span>
-          <span className="artwork-title">{object.title}</span><small>{roleNames[object.musicalRole]} · {audible ? "歌っている" : "ひと休み"}</small>
+          <span className="artwork-title">{object.title}</span><small>{t(roleNames[object.musicalRole])} · {audible ? t("歌っている") : t("ひと休み")}</small>
         </button>;
       })}
       {pending && <div className="garden-artwork garden-ghost" style={{ left: ghost.x * 100 + "%", top: ghost.y * 100 + "%" }}>
-        <span className="artwork-drawing" style={{ aspectRatio: pending.project.canvasAspect, width: `min(100%, ${pending.project.canvasAspect * 90}px)` }}><Artwork object={pending} /></span><small>ここに、ひとつの音。</small></div>}
-      <button className="garden-listener" data-object="listener" aria-label="聴く位置。ドラッグまたは矢印キーで移動"
+        <span className="artwork-drawing" style={{ aspectRatio: pending.project.canvasAspect, width: `min(100%, ${pending.project.canvasAspect * 90}px)` }}><Artwork object={pending} /></span><small>{t("ここに、ひとつの音。")}</small></div>}
+      <button className="garden-listener" data-object="listener" aria-label={t("聴く位置。ドラッグまたは矢印キーで移動")}
         style={{ left: garden.listener.x * 100 + "%", top: garden.listener.y * 100 + "%" }}
-        onKeyDown={(e) => keyboard(e, "listener", garden.listener)}><Ear size={22} /><span>YOU</span></button>
+        onKeyDown={(e) => keyboard(e, "listener", garden.listener)}><Ear size={22} /><span>{t("YOU")}</span></button>
     </div>
-    <div className="garden-bottom"><p role="status">{pending ? garden.objects.length >= MAX_OBJECTS ? "庭は12作品でいっぱいです。配置をキャンセルして作品を選ぶと取り除けます。" : "好きなところにタップして、音を植えよう。" : "耳を動かすと、聴こえる景色が変わる。絵もそのまま動かせます。"}</p>
-      {pending ? <div className="garden-actions"><button disabled={garden.objects.length >= MAX_OBJECTS} onClick={() => place(ghost)}>ここに置く</button><button onClick={onSeedPlaced}><X size={14} />配置をやめる</button></div>
-        : <button className="garden-draw" onClick={onDraw}><Pencil size={15} />もうひとつ描く</button>}
+    <div className="garden-bottom"><p role="status">{pending ? garden.objects.length >= MAX_OBJECTS ? t("庭は12作品でいっぱいです。配置をキャンセルして作品を選ぶと取り除けます。") : t("好きなところにタップして、音を植えよう。") : t("耳を動かすと、聴こえる景色が変わる。絵もそのまま動かせます。")}</p>
+      {pending ? <div className="garden-actions"><button disabled={garden.objects.length >= MAX_OBJECTS} onClick={() => place(ghost)}>{t("ここに置く")}</button><button onClick={onSeedPlaced}><X size={14} />{t("配置をやめる")}</button></div>
+        : <button className="garden-draw" onClick={onDraw}><Pencil size={15} />{t("もうひとつ描く")}</button>}
     </div>
-    {selectedObject && !pending && <div className="garden-selection"><span>{selectedObject.title} · {roleNames[selectedObject.musicalRole]}</span>
-      <button onClick={() => { change({ ...stateRef.current, objects: stateRef.current.objects.filter((o) => o.id !== selected) }); setSelected(null); }}>庭から取り除く</button></div>}
-    {error && <p className="save-error" role="alert">{error}</p>}
+    {selectedObject && !pending && <div className="garden-selection"><span>{selectedObject.title} · {t(roleNames[selectedObject.musicalRole])}</span>
+      <button onClick={() => { change({ ...stateRef.current, objects: stateRef.current.objects.filter((o) => o.id !== selected) }); setSelected(null); }}>{t("庭から取り除く")}</button></div>}
+    {error && <p className="save-error" role="alert">{t(error)}</p>}
   </section>;
 }

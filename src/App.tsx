@@ -46,6 +46,7 @@ import {
 } from "./music/project";
 import type { Project, Stroke, StrokePoint } from "./music/types";
 import { GardenView } from "./garden/GardenView";
+import { LanguageSwitch, useLanguage } from "./i18n/LanguageContext";
 
 type HistoryFrame = Pick<Project, "title" | "strokes" | "canvasAspect">;
 const IDEA_SETS = [
@@ -106,6 +107,7 @@ function CatIcon() {
 }
 
 export default function App() {
+  const { language, t } = useLanguage();
   const [space, setSpace] = useState<"draw" | "garden">("draw");
   const [gardenSeed, setGardenSeed] = useState<Project | null>(null);
   const [project, setProject] = useState<Project>(loadProject);
@@ -132,7 +134,7 @@ export default function App() {
   const [exportOpen, setExportOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<string | { key: string; format?: string; idea?: string }>("");
   const [saved, setSaved] = useState(true);
   const [saveFailed, setSaveFailed] = useState(false);
   const engine = useRef(new AudioEngine());
@@ -580,7 +582,7 @@ export default function App() {
         kind === "wav"
           ? await renderAudio(music, project.instrument)
           : kind === "png"
-            ? await pictureFile(project, notes)
+            ? await pictureFile(project, notes, language)
             : kind === "mid"
               ? new Blob([midiFile(music, project.instrument)], {
                   type: "audio/midi",
@@ -590,7 +592,7 @@ export default function App() {
                 });
       download(blob, project.title, kind);
       setExportOpen(false);
-      setNotice(`${kind.toUpperCase()}を書き出しました。`);
+      setNotice({ key: "{format}を書き出しました。", format: kind.toUpperCase() });
     } catch {
       setNotice("書き出せませんでした。もう一度お試しください。");
     } finally {
@@ -601,7 +603,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="./" aria-label="Picture Score ホーム">
+        <a className="brand" href="./" aria-label={t("Picture Score ホーム")}>
           <Logo />
           <span>
             picture score<span className="brand-dot">.</span>
@@ -609,7 +611,7 @@ export default function App() {
         </a>
         <div className="project-name">
           <input
-            aria-label="作品名"
+            aria-label={t("作品名")}
             value={project.title}
             maxLength={80}
             onChange={(e) => update({ title: e.target.value })}
@@ -622,10 +624,10 @@ export default function App() {
             className={`saved-indicator ${saveFailed ? "failed" : ""}`}
             title={
               saveFailed
-                ? "保存できません。作品ファイルを書き出してください。"
+                ? t("保存できません。作品ファイルを書き出してください。")
                 : saved
-                  ? "このブラウザに保存済み"
-                  : "保存中"
+                  ? t("このブラウザに保存済み")
+                  : t("保存中")
             }
           >
             {saved ? <Check size={12} /> : <span className="saving-dot" />}
@@ -634,7 +636,7 @@ export default function App() {
         <div className="header-actions" hidden={space !== "draw"}>
           <button
             className="icon-button undo-button"
-            aria-label="Undo — 元に戻す"
+            aria-label={t("Undo — 元に戻す")}
             title="Undo (Ctrl/⌘ Z)"
             disabled={!history.current.length}
             onClick={undo}
@@ -644,7 +646,7 @@ export default function App() {
           </button>
           <button
             className="icon-button redo-button"
-            aria-label="Redo — やり直す"
+            aria-label={t("Redo — やり直す")}
             title="Redo (Ctrl/⌘ Shift Z)"
             disabled={!future.current.length}
             onClick={redo}
@@ -655,7 +657,7 @@ export default function App() {
           <div ref={exportRef} className="export-wrap">
             <button
               className={`save-button ${exportOpen ? "open" : ""}`}
-              aria-label="作品を書き出す"
+              aria-label={t("作品を書き出す")}
               aria-expanded={exportOpen}
               onClick={() => setExportOpen((v) => !v)}
             >
@@ -668,14 +670,14 @@ export default function App() {
             </button>
             {exportOpen && (
               <div className="export-menu">
-                <div className="menu-eyebrow">KEEP YOUR CREATION</div>
+                <div className="menu-eyebrow">{t("KEEP YOUR CREATION")}</div>
                 <button
                   disabled={!notes.length || exporting}
                   onClick={() => void exportWork("png")}
                 >
                   <Image size={17} />
                   <span>
-                    絵を保存<small>PNG image</small>
+                    {t("絵を保存")}<small>{t("PNG image")}</small>
                   </span>
                   <span className="file-extension">.png</span>
                 </button>
@@ -685,7 +687,7 @@ export default function App() {
                 >
                   <AudioLines size={17} />
                   <span>
-                    音楽を保存<small>WAV audio</small>
+                    {t("音楽を保存")}<small>{t("WAV audio")}</small>
                   </span>
                   <span className="file-extension">.wav</span>
                 </button>
@@ -695,7 +697,7 @@ export default function App() {
                 >
                   <Music2 size={17} />
                   <span>
-                    楽譜を保存<small>Drawing + accompaniment</small>
+                    {t("楽譜を保存")}<small>{t("Drawing + accompaniment")}</small>
                   </span>
                   <span className="file-extension">.mid</span>
                 </button>
@@ -706,7 +708,7 @@ export default function App() {
                 >
                   <FileJson size={17} />
                   <span>
-                    作品を保存<small>あとで続きを描く</small>
+                    {t("作品を保存")}<small>{t("あとで続きを描く")}</small>
                   </span>
                   <span className="file-extension">.json</span>
                 </button>
@@ -718,7 +720,7 @@ export default function App() {
                   }}
                 >
                   <FolderOpen size={17} />
-                  <span>作品を開く</span>
+                  <span>{t("作品を開く")}</span>
                 </button>
               </div>
             )}
@@ -726,23 +728,25 @@ export default function App() {
         </div>
       </header>
 
-      <nav className="space-nav" aria-label="制作スペース">
-        <button aria-pressed={space === "draw"} onClick={() => { stop(); setSpace("draw"); setGardenSeed(null); }}><Pencil size={15} /> DRAW</button>
-        <button aria-pressed={space === "garden"} onClick={() => { stop(); setSpace("garden"); }}>GARDEN <Music2 size={15} /></button>
-      </nav>
+      <div className="workspace-toolbar">
+        <nav className="space-nav" aria-label={t("制作スペース")}>
+          <button aria-pressed={space === "draw"} onClick={() => { stop(); setSpace("draw"); setGardenSeed(null); }}><Pencil size={15} /> DRAW</button>
+          <button aria-pressed={space === "garden"} onClick={() => { stop(); setSpace("garden"); }}>GARDEN <Music2 size={15} /></button>
+        </nav>
+        <LanguageSwitch />
+      </div>
       <GardenView active={space === "garden"} seed={gardenSeed} onSeedPlaced={() => setGardenSeed(null)}
         onDraw={() => { setSpace("draw"); setGardenSeed(null); }} />
       <main hidden={space !== "draw"}>
         <section className="intro" aria-label="Picture Score">
           <div>
             <p className="eyebrow">
-              <span className="tiny-star">✳</span> A LITTLE DRAWING. A LITTLE
-              MAGIC.
+              <span className="tiny-star">✳</span> {t("A LITTLE DRAWING. A LITTLE MAGIC.")}
             </p>
             <h1>
-              Feel the <em>line.</em>
+              {t("Feel the ")}<em>{t("line.")}</em>
             </h1>
-            <p className="intro-copy">Every stroke answers back.</p>
+            <p className="intro-copy">{t("Every stroke answers back.")}</p>
           </div>
           <div className="intro-note">
             <svg viewBox="0 0 75 40" aria-hidden="true">
@@ -756,35 +760,35 @@ export default function App() {
               />
             </svg>
             <span>
-              No useless strokes.
+              {t("No useless strokes.")}
               <br />
-              Just your imagination.
+              {t("Just your imagination.")}
             </span>
           </div>
         </section>
 
         <section
           className={`score-paper ${finished ? "finished" : ""} ${playing ? "is-playing" : ""}`}
-          aria-label="楽譜キャンバス"
+          aria-label={t("楽譜キャンバス")}
         >
           <div className="paper-heading">
             <div className="paper-label">
               <span className={`status-dot ${playing ? "pulse" : ""}`} />
               <span>
                 {playing
-                  ? "YOUR DRAWING IS PLAYING"
+                  ? t("YOUR DRAWING IS PLAYING")
                   : draft
-                    ? "FOLLOW YOUR LINE"
-                    : "YOUR LITTLE COMPOSITION"}
+                    ? t("FOLLOW YOUR LINE")
+                    : t("YOUR LITTLE COMPOSITION")}
               </span>
             </div>
             <div className="paper-meta">
-              <span>C pentatonic</span>
+              <span>{t("C pentatonic")}</span>
               <span>4 / 4</span>
               <button
                 className="icon-button new-page"
-                aria-label="新しいキャンバス"
-                title="新しいキャンバス（Undoで復元できます）"
+                aria-label={t("新しいキャンバス")}
+                title={t("新しいキャンバス（Undoで復元できます）")}
                 disabled={!project.strokes.length}
                 onClick={clearCanvas}
               >
@@ -793,8 +797,8 @@ export default function App() {
             </div>
           </div>
           <div ref={areaRef} className={`drawing-area tool-${tool}`}>
-            <div className="pitch-hint high">HIGH</div>
-            <div className="pitch-hint low">LOW</div>
+            <div className="pitch-hint high">{t("HIGH")}</div>
+            <div className="pitch-hint low">{t("LOW")}</div>
             <svg
               ref={svgRef}
               style={canvasFit}
@@ -802,7 +806,7 @@ export default function App() {
               data-testid="score-canvas"
               viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
               preserveAspectRatio="none"
-              aria-label="ここに絵を描く。右へ進むと時間が進み、上へ描くと高い音になります。"
+              aria-label={t("ここに絵を描く。右へ進むと時間が進み、上へ描くと高い音になります。")}
               role="img"
               onPointerDown={beginStroke}
               onPointerMove={moveStroke}
@@ -906,10 +910,10 @@ export default function App() {
                   <circle cx="55" cy="22" r="3" />
                   <path className="doodle-note" d="M118 22V8" />
                 </svg>
-                <p>まずは、ひと筆。</p>
-                <span>ハートでも、猫でも、気の向くままに。</span>
+                <p>{t("まずは、ひと筆。")}</p>
+                <span>{t("ハートでも、猫でも、気の向くままに。")}</span>
                 <span className="empty-small">
-                  指やマウスで、ここに描いてみよう
+                  {t("指やマウスで、ここに描いてみよう")}
                 </span>
               </div>
             )}
@@ -920,31 +924,31 @@ export default function App() {
             <span>03</span>
             <span>04</span>
             <span className="time-arrow">
-              TIME <ArrowRight size={13} />
+              {t("TIME")} <ArrowRight size={13} />
             </span>
           </div>
           <div className="paper-footer">
             <div className={`inspiration ${nextIdeas.length ? "next-ideas" : ""}`}>
-              <span className="inspiration-label">{nextIdeas.length ? "次は何を鳴らす？" : "きっかけに"}</span>
+              <span className="inspiration-label">{nextIdeas.length ? t("次は何を鳴らす？") : t("きっかけに")}</span>
               {nextIdeas.length ? nextIdeas.map((idea) => (
                 <button key={idea} onClick={() => {
                   setTool("draw");
-                  setNotice(`「${idea.replace(/^[^\p{L}\p{N}]+/u, "")}」を自由に描いてみよう。`);
+                  setNotice({ key: "「{idea}」を自由に描いてみよう。", idea });
                 }}>
-                  <span>{idea}</span>
+                  <span>{t(idea)}</span>
                 </button>
               )) : <>
               <button onClick={() => loadExample("heart")}>
                 <Heart size={15} />
-                <span>Heart</span>
+                <span>{t("Heart")}</span>
               </button>
               <button onClick={() => loadExample("wave")}>
                 <Waves size={16} />
-                <span>Wave</span>
+                <span>{t("Wave")}</span>
               </button>
               <button onClick={() => loadExample("cat")}>
                 <CatIcon />
-                <span>Cat</span>
+                <span>{t("Cat")}</span>
               </button>
               </>}
             </div>
@@ -952,19 +956,19 @@ export default function App() {
               {playing
                 ? `${formatTime(progress * seconds)} / ${formatTime(seconds)}`
                 : notes.length
-                  ? `${music.playNotes.length} ${music.playNotes.length === 1 ? "sound" : "sounds"} · ${formatTime(seconds)}`
-                  : "Every line is a possibility."}
+                  ? `${music.playNotes.length} ${music.playNotes.length === 1 ? t("sound") : t("sounds")} · ${formatTime(seconds)}`
+                  : t("Every line is a possibility.")}
             </span>
           </div>
         </section>
 
-        <section className="controls" aria-label="描画と再生の操作">
+        <section className="controls" aria-label={t("描画と再生の操作")}>
           <div className="tool-control">
             <div className="tool-switch">
               <button
                 className={tool === "draw" ? "selected" : ""}
                 aria-pressed={tool === "draw"}
-                aria-label="DRAW — 描く"
+                aria-label={t("DRAW — 描く")}
                 onClick={() => setTool("draw")}
               >
                 <Pencil size={17} />
@@ -973,7 +977,7 @@ export default function App() {
               <button
                 className={tool === "erase" ? "selected" : ""}
                 aria-pressed={tool === "erase"}
-                aria-label="ERASE — 線を消す"
+                aria-label={t("ERASE — 線を消す")}
                 onClick={() => setTool("erase")}
               >
                 <Eraser size={17} />
@@ -982,8 +986,8 @@ export default function App() {
             </div>
             <span className="control-hint">
               {tool === "draw"
-                ? "その線が、メロディになる"
-                : "消したい線にふれてみよう"}
+                ? t("その線が、メロディになる")
+                : t("消したい線にふれてみよう")}
             </span>
           </div>
           <div className="play-control">
@@ -992,8 +996,8 @@ export default function App() {
               disabled={!notes.length || exporting}
               aria-label={
                 playing || starting
-                  ? "STOP — 再生を止める"
-                  : "PLAY — 絵を演奏する"
+                  ? t("STOP — 再生を止める")
+                  : t("PLAY — 絵を演奏する")
               }
               onClick={() => void play()}
             >
@@ -1007,20 +1011,20 @@ export default function App() {
               <span>{playing || starting ? "STOP" : "PLAY"}</span>
             </button>
             <span className="control-hint">
-              {playing ? "あなたの絵を、演奏中" : "描いたら、聴いてみよう"}
+              {playing ? t("あなたの絵を、演奏中") : t("描いたら、聴いてみよう")}
             </span>
             <button className="place-garden" disabled={!notes.length || exporting || !!draft}
               onClick={() => { stop(); setGardenSeed(structuredClone(projectRef.current)); setSpace("garden"); }}>
-              <Music2 size={14} /> PLACE IN GARDEN
+              <Music2 size={14} /> {t("PLACE IN GARDEN")}
             </button>
           </div>
           <div className="magnet-control">
             <div className="magnet-title">
               <label htmlFor="magnet">
-                絵 <span>↔</span> 音楽
+                {t("絵")} <span>↔</span> {t("音楽")}
               </label>
               <span>
-                <Sparkles size={11} /> {modeLabel}
+                <Sparkles size={11} /> {t(modeLabel)}
               </span>
             </div>
             <div className="slider-row">
@@ -1031,8 +1035,8 @@ export default function App() {
                 min="0"
                 max="100"
                 value={Math.round(project.magnet * 100)}
-                aria-label="絵と音楽のバランス"
-                aria-valuetext={`${modeLabel} ${Math.round(project.magnet * 100)}%。絵の音符${notes.length}個を${music.playNotes.length}音で演奏`}
+                aria-label={t("絵と音楽のバランス")}
+                aria-valuetext={t("{mode} {percent}%。絵の音符{visual}個を{play}音で演奏", { mode: t(modeLabel), percent: Math.round(project.magnet * 100), visual: notes.length, play: music.playNotes.length })}
                 aria-describedby="interpretation-hint"
                 style={
                   {
@@ -1047,24 +1051,24 @@ export default function App() {
               <Music2 size={15} />
             </div>
             <div className="slider-labels">
-              <span>DRAWING</span>
-              <span>MUSIC</span>
+              <span>{t("DRAWING")}</span>
+              <span>{t("MUSIC")}</span>
             </div>
             <div className="interpretation-count" data-testid="interpretation-count"
               data-visual-count={notes.length} data-play-count={music.playNotes.length}>
-              <span><strong>{notes.length}</strong> visual</span>
+              <span><strong>{notes.length}</strong> {t("visual")}</span>
               <ArrowRight size={13} />
-              <span><strong>{music.playNotes.length}</strong> play</span>
-              {music.support.length > 0 && <span className="support-count">＋伴奏</span>}
+              <span><strong>{music.playNotes.length}</strong> {t("play")}</span>
+              {music.support.length > 0 && <span className="support-count">{t("＋伴奏")}</span>}
             </div>
             <p id="interpretation-hint" className="interpretation-hint">
-              {project.magnet < 0.3 ? "線の細かな表情まで、音に。" :
-                project.magnet > 0.7 ? "音を選んで、ゆったり歌う。" : "絵のかたちを、ひとつのフレーズに。"}
+              {project.magnet < 0.3 ? t("線の細かな表情まで、音に。") :
+                project.magnet > 0.7 ? t("音を選んで、ゆったり歌う。") : t("絵のかたちを、ひとつのフレーズに。")}
             </p>
           </div>
         </section>
 
-        <section className="sound-strip" aria-label="音色の設定">
+        <section className="sound-strip" aria-label={t("音色の設定")}>
           <div className="instrument-control">
             <span className="sound-label">
               <Volume2 size={15} /> SOUND
@@ -1084,7 +1088,7 @@ export default function App() {
                       .catch(() => setNotice("音を開始できませんでした。"));
                   }}
                 >
-                  {instrument}
+                  {t(instrument)}
                 </button>
               ))}
             </div>
@@ -1102,11 +1106,11 @@ export default function App() {
               <span className="toggle-track">
                 <span />
               </span>
-              <span>そっと伴奏</span>
+              <span>{t("そっと伴奏")}</span>
             </label>
             <div className="tempo-control">
               <select
-                aria-label="テンポ"
+                aria-label={t("テンポ")}
                 value={project.tempo}
                 onChange={(e) => {
                   stop();
@@ -1136,23 +1140,23 @@ export default function App() {
         </section>
         {saveFailed && (
           <p className="save-error" role="alert">
-            ブラウザに保存できません。Saveから作品ファイルを書き出してください。
+            {t("ブラウザに保存できません。Saveから作品ファイルを書き出してください。")}
           </p>
         )}
       </main>
 
       <footer className="site-footer">
         <span>
-          <Logo small /> Made of lines. Full of life.
+          <Logo small /> {t("Made of lines. Full of life.")}
         </span>
         <button onClick={() => setHelpOpen(true)}>
-          <CircleHelp size={14} /> あそびかた
+          <CircleHelp size={14} /> {t("あそびかた")}
         </button>
       </footer>
       {notice && (
         <div className="toast" role="status">
           <Check size={16} />
-          {notice}
+          {typeof notice === "string" ? t(notice) : t(notice.key, { format: notice.format ?? "", idea: t(notice.idea ?? "").replace(/^[^\p{L}\p{N}]+/u, "") })}
         </div>
       )}
       <input
@@ -1160,7 +1164,7 @@ export default function App() {
         ref={fileRef}
         accept="application/json,.json"
         className="sr-only"
-        aria-label="作品ファイルを開く"
+        aria-label={t("作品ファイルを開く")}
         onChange={async (e) => {
           const file = e.target.files?.[0];
           e.target.value = "";
@@ -1198,39 +1202,38 @@ export default function App() {
       >
         <button
           className="icon-button close-help"
-          aria-label="説明を閉じる"
+          aria-label={t("説明を閉じる")}
           onClick={() => setHelpOpen(false)}
         >
           <X size={20} />
         </button>
         <Logo />
-        <p className="eyebrow">YOUR FIRST LITTLE COMPOSITION</p>
-        <h2>うまく描かなくて、いい。</h2>
+        <p className="eyebrow">{t("YOUR FIRST LITTLE COMPOSITION")}</p>
+        <h2>{t("うまく描かなくて、いい。")}</h2>
         <p className="help-lead">
-          好きな線を描いたら、PLAY。
+          {t("好きな線を描いたら、PLAY。")}
           <br />
-          その絵のかたちが、そのまま音楽になります。
+          {t("その絵のかたちが、そのまま音楽になります。")}
         </p>
         <div className="help-steps">
           <p>
             <span>01</span>
-            <strong>描く。</strong>上は高い音、下は低い音。縦の線は和音に。
+            <strong>{t("描く。")}</strong>{t("上は高い音、下は低い音。縦の線は和音に。")}
           </p>
           <p>
             <span>02</span>
-            <strong>聴く。</strong>絵の左から右へ、音が見つかります。
+            <strong>{t("聴く。")}</strong>{t("絵の左から右へ、音が見つかります。")}
           </p>
           <p>
             <span>03</span>
-            <strong>ちょっと変える。</strong>「絵 ↔
-            音楽」で、音の細かさを調整。右ほど音を選び、なめらかなフレーズに。
+            <strong>{t("ちょっと変える。")}</strong>{t("「絵 ↔ 音楽」で、音の細かさを調整。右ほど音を選び、なめらかなフレーズに。")}
           </p>
         </div>
         <p className="help-small">
-          元の線は、ずっとそのまま。作品はこのブラウザに自動保存されます。Saveから絵・音・作品ファイルも持ち帰れます。
+          {t("元の線は、ずっとそのまま。作品はこのブラウザに自動保存されます。Saveから絵・音・作品ファイルも持ち帰れます。")}
         </p>
         <button className="help-start" onClick={() => setHelpOpen(false)}>
-          さあ、描いてみよう <ArrowRight size={16} />
+          {t("さあ、描いてみよう")} <ArrowRight size={16} />
         </button>
       </dialog>
     </div>

@@ -29,7 +29,7 @@
 .garden-artwork.audible { color:#b45133; background:radial-gradient(ellipse,#fff9d2aa,transparent 70%); }
 .garden-artwork.audible:before { content:""; position:absolute; inset:-8px; border-radius:50%; border:1px solid #a4b18c44; pointer-events:none; }
 .artwork-title { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:10px; color:#56664b; margin-top:5px; }
-.garden-artwork small { display:block; font-size:8px; color:#8e967f; margin-top:4px; white-space:nowrap; }
+.garden-artwork small { display:block; font-size:8px; color:#8e967f; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .garden-ghost { opacity:.65; pointer-events:none; outline:1px dashed #80936b; }
 .garden-listener { position:absolute; transform:translate(-50%,-50%); width:48px; height:48px; background:#fafbf5; border:1px solid #a2b18e; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#526b41; box-shadow:0 3px 12px #697c4220; cursor:grab; }
 .garden-listener:not(:disabled):active { transform:translate(-50%,-50%); }

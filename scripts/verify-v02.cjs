@@ -5,7 +5,8 @@ async (page) => {
     visual: Number(el.dataset.visualCount), play: Number(el.dataset.playCount),
   }));
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.getByRole("button", { name: "Cat", exact: true }).click();
+  await page.getByRole("combobox", { name: "Language / 言語" }).selectOption("ja");
+  await page.getByRole("button", { name: "猫", exact: true }).click();
   const paths = await page.locator("[data-stroke]").evaluateAll((els) => els.map((e) => e.getAttribute("d")));
   const slider = page.getByRole("slider", { name: "絵と音楽のバランス" });
   await slider.focus();

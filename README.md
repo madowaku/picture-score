@@ -23,6 +23,7 @@ npm run preview
 
 ## できること
 
+- 画面上部の「日本語 / English」で表示言語を切り替え。選択はこのブラウザに保存され、絵・作品名・演奏中の状態はそのまま保持
 - DRAW / GARDENを切り替え、作品を最大12個まで音の庭へ配置。耳を動かすと近くの作品が共通の拍で鳴る
 - マウス・ペン・タッチで描画。筆圧とタイムスタンプを元の線に保持
 - 描画時の縦横比を保存。画面サイズ変更やPNG保存でも絵を引き伸ばさない
@@ -77,3 +78,5 @@ SpaceでPLAY / STOP、Dで描画、Eで消しゴム、Ctrl/⌘ ZでUndo、Shift�
 v0.2の設計・検証・スマホ実機チェックは [docs/make-it-sing.md](docs/make-it-sing.md)、v0.3のコール＆レスポンス設計は [docs/feel-the-line.md](docs/feel-the-line.md) を参照してください。
 
 Garden v0.1の操作・保存形式・共通時計・距離ミキサーと検証方法は [docs/garden.md](docs/garden.md) を参照してください。
+
+日英の文言は `src/i18n/messages.ts` に集約しています。ブラウザ検証は専用セッションで `npx @playwright/cli -s=language run-code --filename scripts/verify-language.cjs` を実行します（先に同じセッションで開発URLを `open`）。

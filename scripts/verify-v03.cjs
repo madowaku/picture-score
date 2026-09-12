@@ -5,7 +5,8 @@ async (page) => {
   await page.evaluate(() => localStorage.removeItem("picture-score:project:v1"));
   await page.reload();
   await page.waitForLoadState("networkidle");
-  assert(await page.getByText("Feel the line.").isVisible(), "v0.3 hero is missing");
+  await page.getByRole("combobox", { name: "Language / 言語" }).selectOption("ja");
+  assert(await page.getByRole("heading", { name: "線を、感じよう。" }).isVisible(), "v0.3 hero is missing");
   assert((await page.request.get(page.url().replace(/\/$/, "") + "/sfx/magnet-drop.ogg")).ok(), "Magnet SFX is missing");
 
   const canvas = page.getByTestId("score-canvas");
