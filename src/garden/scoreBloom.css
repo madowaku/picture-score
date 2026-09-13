@@ -32,6 +32,54 @@
   vector-effect:non-scaling-stroke;
   opacity:.8;
 }
+.score-bloom-debug-toggle {
+  position:absolute;
+  top:10px;
+  right:10px;
+  z-index:20;
+  min-width:36px;
+  min-height:36px;
+  border:1px solid #8ca398;
+  border-radius:8px;
+  background:#f9fcf8e8;
+  color:#315046;
+  font:600 10px/1 ui-monospace,monospace;
+  pointer-events:auto;
+}
+.score-bloom-debug-toggle[aria-pressed="true"] { background:#dfece6; }
+.score-bloom-debug {
+  position:absolute;
+  top:54px;
+  right:10px;
+  z-index:21;
+  width:min(360px,calc(100% - 20px));
+  max-height:calc(100% - 66px);
+  overflow:auto;
+  padding:12px;
+  border:1px solid #9bb0a7;
+  border-radius:10px;
+  background:#f9fcf8f2;
+  box-shadow:0 8px 24px #17352f24;
+  color:#23483e;
+  pointer-events:auto;
+  font:11px/1.45 ui-monospace,monospace;
+}
+.score-bloom-debug header { display:flex; justify-content:space-between; gap:10px; align-items:baseline; margin-bottom:10px; }
+.score-bloom-debug header strong { font-size:11px; letter-spacing:.08em; }
+.score-bloom-debug header span { color:#60766e; font-size:9px; text-align:right; }
+.score-bloom-debug-transport { display:grid; grid-template-columns:auto auto 1fr; gap:6px; align-items:center; margin-bottom:10px; }
+.score-bloom-debug-transport button { min-height:30px; padding:4px 8px; border:1px solid #b7c9c1; border-radius:6px; background:white; }
+.score-bloom-debug-transport label { display:flex; align-items:center; gap:5px; min-width:0; }
+.score-bloom-debug-transport input { width:100%; }
+.score-bloom-debug-transport output { grid-column:1/-1; text-align:right; color:#60766e; font-size:9px; }
+.score-bloom-debug-picker { display:grid; grid-template-columns:auto 1fr; gap:8px; align-items:center; margin-bottom:10px; }
+.score-bloom-debug-picker select { min-width:0; width:100%; padding:5px; border:1px solid #c4d4cd; border-radius:5px; background:white; font:inherit; }
+.score-bloom-debug-trace { display:grid; gap:5px; }
+.score-bloom-debug-row { display:grid; grid-template-columns:84px 1fr; gap:2px 8px; padding:6px; border-radius:6px; background:#edf5f1; }
+.score-bloom-debug-row span { color:#60766e; }
+.score-bloom-debug-row code { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#1f4037; }
+.score-bloom-debug-row small { grid-column:2; color:#788b84; }
+.score-bloom-debug-empty { margin:0; color:#788b84; }
 
 @keyframes score-bloom-sway {
   0%,100% { transform:translateX(var(--score-bloom-amplitude-negative)) rotate(-1.2deg); }
