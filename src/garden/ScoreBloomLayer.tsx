@@ -9,15 +9,21 @@ import "./scoreBloom.css";
 
 type MotionStyle = CSSProperties & {
   "--score-bloom-amplitude"?: string;
+  "--score-bloom-amplitude-negative"?: string;
   "--score-bloom-duration"?: string;
-  "--score-bloom-reaction"?: string;
+  "--score-bloom-pulse-scale"?: string;
 };
 
-const motionStyle = (entity: WorldEntity): MotionStyle => ({
-  "--score-bloom-amplitude": `${Math.max(0, entity.motion.amplitude) * 8}px`,
-  "--score-bloom-duration": `${entity.motion.speed > 0 ? Math.max(0.8, 2.4 / entity.motion.speed) : 8}s`,
-  "--score-bloom-reaction": `${Math.max(0, entity.reaction.amount)}`,
-});
+const motionStyle = (entity: WorldEntity): MotionStyle => {
+  const amplitude = Math.max(0, entity.motion.amplitude) * 8;
+  const reaction = Math.max(0, entity.reaction.amount);
+  return {
+    "--score-bloom-amplitude": `${amplitude}px`,
+    "--score-bloom-amplitude-negative": `${-amplitude}px`,
+    "--score-bloom-duration": `${entity.motion.speed > 0 ? Math.max(0.8, 2.4 / entity.motion.speed) : 8}s`,
+    "--score-bloom-pulse-scale": `${1 + reaction * 0.04}`,
+  };
+};
 
 const assetAnchor = (entity: WorldEntity, palette: PaletteDefinition) =>
   palette.roles[entity.role].assets.find(asset => asset.id === entity.assetId)?.anchor ?? { x: 0.5, y: 0.5 };
