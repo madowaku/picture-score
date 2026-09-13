@@ -39,4 +39,13 @@ describe("GardenScoreBloomBridge clock seam", () => {
     expect(current.snapshot()).toEqual(fresh.snapshot());
     expect(rewind?.snapshot).toEqual(fresh.snapshot());
   });
+
+  it("publishes a rewind frame even when visible entities do not change", () => {
+    const current = session();
+    current.advanceTo(0.5);
+    const rewind = advanceGardenScoreBloom(current, 0.25);
+    expect(rewind).not.toBeNull();
+    expect(rewind!.snapshot.time).toBe(0.25);
+    expect(rewind!.snapshot.entities).toHaveLength(0);
+  });
 });
