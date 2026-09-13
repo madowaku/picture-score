@@ -115,6 +115,21 @@ describe("Palette runtime", () => {
     expect(cues.some((cue) => cue.role === "melody")).toBe(false);
   });
 
+  it("enforces the total spawn budget independently of role budgets", () => {
+    const limited: PaletteDefinition = {
+      ...structuredClone(fixtureGardenPalette),
+      id: "fixture-total-limited",
+      limits: {
+        roles: { ...fixtureGardenPalette.limits.roles },
+        total: 1,
+      },
+    };
+    const runtime = createPaletteRuntime(limited);
+    const cues = applyAll(runtime);
+    expect(cues.filter((cue) => cue.type === "spawn")).toHaveLength(1);
+    expect(runtime.snapshot().totalSpawned).toBe(1);
+  });
+
   it("updates environment only from WorldEvents and resets cleanly", () => {
     const runtime = createPaletteRuntime(fixtureGardenPalette);
     const before = runtime.snapshot();
