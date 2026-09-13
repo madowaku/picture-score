@@ -72,6 +72,21 @@ describe("EventScheduler", () => {
     expect(forward).toEqual(first);
   });
 
+  it("isolates stored events from consumer mutation across replay", () => {
+    const scheduler = new EventScheduler(fixture());
+    scheduler.flushUntil(0, (event) => {
+      if (event.type === "pulse") event.positionHint.x = 0.99;
+    });
+
+    let replayed: WorldEvent | undefined;
+    scheduler.replayTo(0, (event) => {
+      replayed = event;
+    });
+
+    expect(replayed?.type).toBe("pulse");
+    if (replayed?.type === "pulse") expect(replayed.positionHint.x).toBe(0.5);
+  });
+
   it("rejects invalid targets, unsorted input and duplicate event ids", () => {
     const scheduler = new EventScheduler(fixture());
     expect(() => scheduler.flushUntil(-1, () => undefined)).toThrow(/target time/);
