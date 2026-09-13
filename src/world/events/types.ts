@@ -64,6 +64,7 @@ export interface SwayEvent extends WorldEventBase<"sway", "resonance"> {
   intensity: number;
   duration: number;
   direction: number;
+  positionHint: PositionHint;
 }
 
 export interface AtmosphereEvent extends WorldEventBase<"atmosphere", "section"> {

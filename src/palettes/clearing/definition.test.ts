@@ -59,6 +59,7 @@ describe("Clearing official palette", () => {
     expect(first.some((cue) => cue.type === "spawn" && cue.role === "harmony")).toBe(true);
     expect(first.some((cue) => cue.type === "spawn" && cue.role === "rhythm")).toBe(true);
     expect(first.some((cue) => cue.type === "spawn" && cue.role === "ornament")).toBe(true);
+    expect(first.some((cue) => cue.type === "spawn" && cue.role === "resonance")).toBe(true);
     expect(first.some((cue) => cue.type === "react" && cue.role === "resonance")).toBe(true);
   });
 

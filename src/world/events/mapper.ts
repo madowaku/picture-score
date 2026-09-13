@@ -136,6 +136,7 @@ export function mapMusicalEvent(
           intensity: clamp01(event.strength * 0.6 + event.depth * 0.4),
           duration: event.duration,
           direction: random.range(-1, 1),
+          positionHint: positionFromSeed(seed, 1 - event.depth),
         },
       ];
     }

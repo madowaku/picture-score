@@ -1,0 +1,188 @@
+:root {
+  font-family: "Noto Sans JP", system-ui, sans-serif;
+  color: #17352f;
+  background: #eaf6f0;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #eaf6f0;
+}
+
+button, input { font: inherit; }
+button { cursor: pointer; }
+
+.core-meaning-qa {
+  width: min(1180px, calc(100% - 28px));
+  margin: 0 auto;
+  padding: 28px 0 44px;
+}
+
+.core-meaning-qa-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 18px;
+}
+
+.core-meaning-qa-header h1 {
+  margin: 2px 0 8px;
+  font-family: "Zen Maru Gothic", "Noto Sans JP", sans-serif;
+  font-size: clamp(1.55rem, 4vw, 2.7rem);
+  line-height: 1.12;
+}
+
+.core-meaning-qa-header p { margin: 0; color: #5a716a; }
+.core-meaning-qa-kicker {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: #6c7ef2 !important;
+}
+
+.core-meaning-qa-reduced {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  padding: 10px 12px;
+  border: 1px solid #b7d3c9;
+  border-radius: 999px;
+  background: rgba(255,255,255,.78);
+  font-size: .84rem;
+}
+
+.core-meaning-qa-scenes {
+  display: flex;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.core-meaning-qa-scenes button,
+.core-meaning-qa-buttons button,
+.core-meaning-qa-answer > button {
+  border: 1px solid #b7d3c9;
+  border-radius: 999px;
+  background: #fff;
+  color: #17352f;
+  font-weight: 800;
+  min-height: 40px;
+  padding: 0 16px;
+}
+
+.core-meaning-qa-scenes button {
+  width: 44px;
+  padding: 0;
+}
+
+.core-meaning-qa-scenes button.is-active {
+  border-color: #6c7ef2;
+  box-shadow: inset 0 0 0 2px rgba(108,126,242,.18);
+}
+
+.core-meaning-qa-stage {
+  position: relative;
+  width: 100%;
+  height: clamp(390px, 56vh, 620px);
+  overflow: hidden;
+  border: 1px solid #b7d3c9;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.9), rgba(255,255,255,.36) 42%, transparent 72%),
+    linear-gradient(180deg, #f7fbf8 0%, #e5f3eb 62%, #dceee4 100%);
+  box-shadow: 0 18px 54px rgba(23,53,47,.08);
+}
+
+.core-meaning-qa-stage .score-bloom-layer,
+.core-meaning-qa-source {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.core-meaning-qa-source {
+  z-index: 4;
+  pointer-events: none;
+  color: #17352f;
+  filter: drop-shadow(0 5px 6px rgba(23,53,47,.08));
+}
+
+.core-meaning-qa-scene-label {
+  position: absolute;
+  z-index: 5;
+  top: 16px;
+  left: 18px;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.88);
+  border: 1px solid #b7d3c9;
+  font-weight: 900;
+}
+
+.core-meaning-qa-transport {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.core-meaning-qa-buttons { display: flex; gap: 8px; }
+.core-meaning-qa-transport input[type="range"] { width: 100%; }
+.core-meaning-qa-transport output {
+  min-width: 86px;
+  font-variant-numeric: tabular-nums;
+  color: #5a716a;
+  text-align: right;
+}
+
+.core-meaning-qa-answer {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid #b7d3c9;
+  border-radius: 20px;
+  background: rgba(255,255,255,.68);
+}
+
+.core-meaning-qa-answer p { margin: 10px 2px 0; color: #5a716a; }
+.core-meaning-qa-answer [data-qa-answer] {
+  display: grid;
+  gap: 4px;
+  margin-top: 12px;
+}
+.core-meaning-qa-answer small { color: #6c7ef2; font-weight: 800; }
+
+@media (max-width: 620px) {
+  .core-meaning-qa {
+    width: min(100% - 20px, 520px);
+    padding-top: 16px;
+  }
+  .core-meaning-qa-header {
+    display: grid;
+    gap: 12px;
+  }
+  .core-meaning-qa-reduced { justify-self: start; }
+  .core-meaning-qa-stage {
+    height: min(56vh, 470px);
+    border-radius: 22px;
+  }
+  .core-meaning-qa-transport {
+    grid-template-columns: 1fr auto;
+  }
+  .core-meaning-qa-buttons { grid-column: 1 / -1; }
+  .core-meaning-qa-transport input[type="range"] { min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+  }
+}

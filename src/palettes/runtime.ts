@@ -75,6 +75,8 @@ const spawnIntensity = (event: WorldEvent): number => {
       return event.intensity;
     case "spark":
       return event.intensity;
+    case "sway":
+      return event.intensity;
     default:
       return 0;
   }
@@ -83,7 +85,7 @@ const spawnIntensity = (event: WorldEvent): number => {
 const createSpawnCue = (
   definition: PaletteDefinition,
   roleDefinition: RoleDefinition,
-  event: Extract<WorldEvent, { type: "birth" | "bloom" | "pulse" | "spark" }>,
+  event: Extract<WorldEvent, { type: "birth" | "bloom" | "pulse" | "spark" | "sway" }>,
   reducedMotion: boolean,
 ): PaletteSpawnCue => {
   const visualSeed = deriveSeed(event.seed, definition.id, event.role, "visual");
@@ -209,7 +211,22 @@ export function createPaletteRuntime(
       case "sway": {
         const roleDefinition = definition.roles.resonance;
         const motion = resolveMotionProfile(roleDefinition.motion, reducedMotion);
-        const cue: PaletteReactCue = {
+        const cues: PaletteCue[] = [];
+
+        if (canSpawn("resonance")) {
+          const spawn = createSpawnCue(
+            definition,
+            roleDefinition,
+            event,
+            reducedMotion,
+          );
+          spawnCounts.resonance += 1;
+          totalSpawned += 1;
+          spawnedCueIds.add(spawn.id);
+          cues.push(spawn);
+        }
+
+        const react: PaletteReactCue = {
           id: cueId(definition.id, event.id, "react"),
           type: "react",
           paletteId: definition.id,
@@ -223,7 +240,8 @@ export function createPaletteRuntime(
           duration: event.duration,
           motion,
         };
-        return [cue];
+        cues.push(react);
+        return cues;
       }
 
       case "atmosphere":
