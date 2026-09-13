@@ -34,16 +34,16 @@
 }
 
 @keyframes score-bloom-sway {
-  0%,100% { transform:translateX(calc(var(--score-bloom-amplitude) * -.35)) rotate(-1.2deg); }
-  50% { transform:translateX(calc(var(--score-bloom-amplitude) * .35)) rotate(1.2deg); }
+  0%,100% { transform:translateX(var(--score-bloom-amplitude-negative)) rotate(-1.2deg); }
+  50% { transform:translateX(var(--score-bloom-amplitude)) rotate(1.2deg); }
 }
 @keyframes score-bloom-float {
   0%,100% { transform:translateY(0); }
-  50% { transform:translateY(calc(var(--score-bloom-amplitude) * -1)); }
+  50% { transform:translateY(var(--score-bloom-amplitude-negative)); }
 }
 @keyframes score-bloom-pulse {
   0%,100% { transform:scale(1); opacity:.86; }
-  50% { transform:scale(calc(1 + var(--score-bloom-reaction) * .04)); opacity:1; }
+  50% { transform:scale(var(--score-bloom-pulse-scale)); opacity:1; }
 }
 @keyframes score-bloom-twinkle {
   0%,100% { opacity:.58; transform:scale(.96); }
