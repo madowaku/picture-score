@@ -53,7 +53,7 @@ const originFromSpawnCue = (cue: PaletteSpawnCue): EntityOrigin => ({
 export class ScoreBloomSession {
   private readonly trackId: string;
   private readonly seed: string | number;
-  private readonly palette: PaletteDefinition;
+  private readonly paletteId: string;
   private readonly scheduler: EventScheduler;
   private readonly paletteRuntime: PaletteRuntime;
   private readonly entities: EntityStore;
@@ -69,12 +69,12 @@ export class ScoreBloomSession {
 
     this.trackId = options.trackId;
     this.seed = options.seed;
-    this.palette = options.palette;
     this.scheduler = new EventScheduler(worldEvents);
     this.paletteRuntime = createPaletteRuntime(options.palette, {
       reducedMotion: options.reducedMotion,
     });
-    this.entities = new EntityStore(options.palette.limits.total);
+    this.paletteId = this.paletteRuntime.definition.id;
+    this.entities = new EntityStore(this.paletteRuntime.definition.limits.total);
   }
 
   get revision(): number {
@@ -158,7 +158,7 @@ export class ScoreBloomSession {
     return {
       version: "picture-score:world:v1",
       trackId: this.trackId,
-      paletteId: this.palette.id,
+      paletteId: this.paletteId,
       seed: this.seed,
       time,
       cursor: this.scheduler.cursor,
