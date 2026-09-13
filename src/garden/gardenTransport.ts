@@ -215,7 +215,8 @@ export class GardenTransport {
       })();
       this.life.enqueue({ objectId: lane.object.id, type: duration >= .6 ? 'sustain-start' : 'note', at,
         beat: (at - this.startTime) / seconds, pitch: note.pitch, velocity: Math.min(.65, note.velocity), duration,
-        role: lane.object.musicalRole, layer, source: anchor, relation: plan?.kind, partnerId: plan?.partnerIds[0], formation: note.formation });
+        role: lane.object.musicalRole, layer, source: anchor, relation: plan?.kind, partnerId: plan?.partnerIds[0],
+        formation: note.formation, formationIds: note.formationIds });
       lane.activity.push({ at, until: at + duration + .12, layer, pitch: note.pitch });
       nodes.forEach((node) => {
         lane.voices.add(node); lane.layerVoices[layer].add(node);

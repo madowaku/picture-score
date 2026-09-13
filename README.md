@@ -1,4 +1,6 @@
-# Picture Score v0.6.1 — CLEARING
+# Picture Score v0.7 — WEAVE
+
+**Relationships become landscape.** 一緒に鳴った時間が、作品と作品のあいだに景色をつくる。
 
 **Growth frames the drawing, never covers it.** 育つほど、絵に居場所ができる。
 
@@ -22,6 +24,8 @@ npm run preview
 ```
 
 ## できること
+
+- v0.7 WEAVE：実際に一緒に鳴った作品のあいだへ、共有パッチ・穏やかな道・CASCADEの種の軌跡・ROUNDの中心の景色が残る。近さだけでは増えず、12作品でも絵と余白を優先する。[実装と検証](docs/weave-implementation.md)
 
 - v0.6.1 CLEARING：画像生成した芽・草・種・星・花が、絵の周りで育つ。作品ごとの余白を守り、関係の道もその縁につながる。[実装と生成素材・検証](docs/clearing-implementation.md)
 

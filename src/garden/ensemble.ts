@@ -8,7 +8,7 @@ import type { GardenState, MusicalObject, Position } from "./gardenState";
 
 export type RelationKind = "call-response" | "support" | "pulse-fill" | "sparkle-fill" | "shared-bed";
 export interface EnsembleRelation { a: string; b: string; strength: number; kind: RelationKind }
-export interface ArrangementNote { pitch: number; beat: number; duration: number; velocity: number; life?: LifeSource; formation?: WonderRuleId }
+export interface ArrangementNote { pitch: number; beat: number; duration: number; velocity: number; life?: LifeSource; formation?: WonderRuleId; formationIds?: string[] }
 export interface ObjectArrangementPlan {
   wonder?: string;
   strength: number;

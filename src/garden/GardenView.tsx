@@ -12,6 +12,9 @@ import { clearingPath, gardenClearings, gardenLayout } from "./clearing";
 import { ClearingMask } from "./ClearingMask";
 import { useId } from "react";
 import { GrowthLayer } from "./GrowthLayer";
+import { WeaveLayer } from "./WeaveLayer";
+import { WEAVE_KEY, WeaveEvidence, loadWeave } from "./weave";
+import type { WeaveState } from "./weave";
 import { GROWTH_KEY, GrowthAccumulator, growthStage, loadGrowth, pairKey, pruneGrowth } from "./growth";
 import "./garden.css";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -41,6 +44,8 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   const [garden, setGarden] = useState(loaded.state);
   const [loadedGrowth] = useState(() => loadGrowth(loaded.state));
   const [growth, setGrowth] = useState(loadedGrowth.state);
+  const [loadedWeave] = useState(() => loadWeave(loaded.state));
+  const [weave, setWeave] = useState<WeaveState>(loadedWeave.state);
   const [layout, setLayout] = useState(() => gardenLayout(window.innerWidth, window.innerHeight));
   useEffect(() => {
     const resize = () => setLayout(gardenLayout(window.innerWidth, window.innerHeight));
@@ -51,6 +56,9 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   const relationMask = useId();
   const growthRef = useRef(growth);
   const growthDirty = useRef(false);
+  const weaveRef = useRef(weave);
+  const weaveDirty = useRef(false);
+  const weaveEvidence = useRef(new WeaveEvidence(loadedWeave.state));
   const [growthError, setGrowthError] = useState(loadedGrowth.protected);
   const [moments, setMoments] = useState(new Set<string>());
   const [discovery, setDiscovery] = useState("");
@@ -134,6 +142,10 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     if (JSON.stringify(pruned) !== JSON.stringify(growthRef.current)) {
       growthRef.current = pruned; growthDirty.current = true; setGrowth(pruned);
     }
+    const prunedWeave = weaveEvidence.current.prune(next);
+    if (JSON.stringify(prunedWeave) !== JSON.stringify(weaveRef.current)) {
+      weaveRef.current = prunedWeave; weaveDirty.current = true; setWeave(prunedWeave);
+    }
     changed.current = true; stateRef.current = next; setGarden(next); transport.current.update(next);
   }
   function pingArtwork(id: string) {
@@ -190,7 +202,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
       } catch { setGrowthError(true); }
     };
     engine.onHeard = (slice) => {
-      if (!slice) { growthAccumulator.current.reset(); flush(); return; }
+      if (!slice) { growthAccumulator.current.reset(); weaveEvidence.current.resetPhrase(); flush(); return; }
       const previous = growthRef.current;
       const next = growthAccumulator.current.advance(previous, slice);
       if (JSON.stringify(previous) === JSON.stringify(next)) return;
@@ -230,6 +242,16 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     };
   }, [loadedGrowth.protected, loaded.error]);
   useEffect(() => {
+    const flush = () => {
+      if (!weaveDirty.current || loaded.error) return;
+      try { localStorage.setItem(WEAVE_KEY, JSON.stringify(weaveRef.current)); weaveDirty.current = false; }
+      catch { /* relationship memory is disposable; keep the in-memory landscape alive */ }
+    };
+    const saveTimer = setInterval(flush, 2000);
+    window.addEventListener("pagehide", flush);
+    return () => { flush(); clearInterval(saveTimer); window.removeEventListener("pagehide", flush); };
+  }, [loaded.error]);
+  useEffect(() => {
     if (!changed.current) return;
     // Save on pointer release as well as discrete edits; source data never changes during a drag.
     const timer = setTimeout(() => {
@@ -246,6 +268,14 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     };
     window.addEventListener("pagehide", flush);
     return () => window.removeEventListener("pagehide", flush);
+  }, []);
+  useEffect(() => {
+    const off = life.current.observe(event => {
+      const next = weaveEvidence.current.observe(event);
+      if (!next) return;
+      weaveRef.current = next; weaveDirty.current = true; setWeave(next);
+    });
+    return () => { off(); weaveEvidence.current.resetPhrase(); };
   }, []);
   useEffect(() => {
     if (!active) resetListening();
@@ -387,6 +417,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         <path d="M-30 590C140 620 110 370 325 350S470 140 660 220 740 480 1040 345" />
         <ellipse cx="805" cy="123" rx="84" ry="30" /><ellipse cx="155" cy="490" rx="65" ry="23" />
       </svg>
+      <WeaveLayer garden={garden} growth={growth} weave={weave} moments={growthMoments} clearings={clearings} layout={layout} life={life.current} />
       <GrowthLayer garden={garden} growth={growth} moments={growthMoments} clearings={clearings} layout={layout} />
       <GardenLifeLayer garden={garden} life={life.current} clearings={clearings} />
       <svg className="ensemble-links" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">

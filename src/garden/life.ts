@@ -25,6 +25,8 @@ export interface GardenLifeEvent {
   relation?: RelationKind;
   partnerId?: string;
   formation?: WonderRuleId;
+  /** Ordered participants that actually produced a WONDER garden phrase. */
+  formationIds?: string[];
   token?: number;
 }
 export const LIFE_LIMITS = { queue: 256, perObjectInterval: .125, globalPerSecond: 64, staleAfter: .15 };
@@ -46,7 +48,8 @@ export class GardenLifeBridge {
   }
   enqueue(event: GardenLifeEvent) {
     if (!Number.isFinite(event.at + event.duration) || event.duration < 0 || this.pending.length >= LIFE_LIMITS.queue) return;
-    this.pending.push({ ...event, source: event.source ? { ...event.source, point: { ...event.source.point }, spark: event.source.spark ? { ...event.source.spark } : undefined } : undefined, token: ++this.serial });
+    this.pending.push({ ...event, formationIds: event.formationIds ? [...event.formationIds] : undefined,
+      source: event.source ? { ...event.source, point: { ...event.source.point }, spark: event.source.spark ? { ...event.source.spark } : undefined } : undefined, token: ++this.serial });
   }
   /** Pure clock seam for tests; stale attacks are skipped instead of caught up. */
   flush(now: number, audible: (event: GardenLifeEvent) => boolean) {
@@ -66,7 +69,7 @@ export class GardenLifeBridge {
       if (!first) { attacks.set(key, event); ready.push(event); continue; }
       first.duration = Math.max(first.duration, event.duration);
       if (event.type === 'sustain-start') first.type = 'sustain-start';
-      if (event.formation) first.formation = event.formation;
+      if (event.formation) { first.formation = event.formation; first.formationIds = event.formationIds ? [...event.formationIds] : first.formationIds; }
       if (event.relation) { first.relation = event.relation; first.partnerId = event.partnerId; }
       if (event.source) {
         const before = first.source;

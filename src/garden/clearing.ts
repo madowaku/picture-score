@@ -125,6 +125,6 @@ export function clearingPath(a: Clearing, b: Clearing, variation = 0) {
   const end = { x: b.x - ux * rb, y: b.y - uy * rb };
   const bend = Math.max(-1, Math.min(1, variation)) * Math.min(24, gap * .12);
   const cx = (start.x + end.x) / 2 - uy * bend, cy = (start.y + end.y) / 2 + ux * bend;
-  return { start, end, opacity: Math.min(1, gap / 60),
+  return { start, end, control: { x: cx, y: cy }, opacity: Math.min(1, gap / 60),
     d: `M${start.x} ${start.y} Q${cx} ${cy} ${end.x} ${end.y}` };
 }

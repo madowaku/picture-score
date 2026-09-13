@@ -2,7 +2,7 @@ import { memo, useId } from 'react';
 import type { GardenState } from './gardenState';
 import { growthStage } from './growth';
 import type { GrowthState } from './growth';
-import { clearingPath, gardenHabitats, seed } from './clearing';
+import { gardenHabitats } from './clearing';
 import type { Clearing, GardenLayout } from './clearing';
 import { ClearingMask } from './ClearingMask';
 
@@ -18,15 +18,10 @@ export const GrowthLayer = memo(function GrowthLayer({ garden, growth, moments, 
     <ClearingMask id={mask} clearings={clearings} />
     <g mask={`url(#${mask})`}>
       {paths.map(([key, relation]) => {
-        const a = clearings.find(e => e.id === relation.a), b = clearings.find(e => e.id === relation.b);
-        if (!a || !b) return null;
-        const path = clearingPath(a, b, seed(key) * 2 - 1);
-        if (!path) return null;
-        const stage = growthStage(relation.sharedBeats, true);
+        // Pair evidence stays available for Growth v1 and older QA hooks. The
+        // visible relationship landscape now lives in WeaveLayer.
         return <g key={key} data-growth-pair={key} data-shared-beats={relation.sharedBeats.toFixed(3)}
-          className={moments.has(key) ? 'growth-moment' : ''} style={{ opacity: (.2 + stage * .12) * path.opacity }}>
-          <path className="growth-path" d={path.d} />
-        </g>;
+          data-growth-landscape="weave" aria-hidden="true" />;
       })}
       {garden.objects.map(object => {
         const beats = growth.objects[object.id] ?? 0, stage = growthStage(beats);

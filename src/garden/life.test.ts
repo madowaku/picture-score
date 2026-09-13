@@ -25,11 +25,14 @@ describe('life clock observation',()=>{
   it('coalesces a chord and simultaneous free/ensemble notes, retaining spark and formation cues',()=>{
     const {bridge,heard}=observe();
     bridge.enqueue(event(1,'a',{source:{strokeId:'line',point:{x:20,y:40}}}));
-    bridge.enqueue(event(1,'a',{pitch:64,type:'sustain-start',duration:1.5,layer:'ensemble',formation:'garden-triad-round'}));
+    const formationIds=['a','b','c'];
+    bridge.enqueue(event(1,'a',{pitch:64,type:'sustain-start',duration:1.5,layer:'ensemble',formation:'garden-triad-round',formationIds}));
     bridge.enqueue(event(1,'a',{pitch:72,source:{strokeId:'line',point:{x:20,y:40},spark:{x:200,y:100}}}));
     bridge.flush(1.01,()=>true);
     expect(heard).toHaveLength(1);
-    expect(heard[0]).toMatchObject({type:'sustain-start',duration:1.5,formation:'garden-triad-round',source:{spark:{x:200,y:100}}});
+    expect(heard[0]).toMatchObject({type:'sustain-start',duration:1.5,formation:'garden-triad-round',formationIds,source:{spark:{x:200,y:100}}});
+    heard[0]!.formationIds![0]='copied';
+    expect(formationIds[0]).toBe('a');
     bridge.flush(2.5,()=>true);expect(heard.at(-1)?.type).toBe('sustain-end');
   });
   it('filters inaudible branches before coalescing and isolates source positions',()=>{

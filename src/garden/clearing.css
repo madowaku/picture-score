@@ -1,4 +1,16 @@
 /* CLEARING: generated pigment belongs around the drawing, never under its ink. */
+/* WEAVE: relationship memory is quiet ground between the clearings. */
+.weave-layer { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:hidden; z-index:1; }
+.weave-layer * { pointer-events:none; }
+.weave-path { fill:none; stroke:#899a73; stroke-width:1.6; stroke-linecap:round; stroke-dasharray:2 9; opacity:.2; vector-effect:non-scaling-stroke; }
+.weave-layer image { mix-blend-mode:multiply; }
+.weave-layer .weave-moment { animation:weave-unfold 620ms ease-out; transform:none; }
+@keyframes weave-unfold { 0% { opacity:.05; } 42% { opacity:1; } 100% { opacity:.72; } }
+/* Preserve the intended visual hierarchy: relationship ground, local habitat, live cue, artwork. */
+.growth-layer { z-index:2; }
+.garden-life-layer,.ensemble-links { z-index:3; }
+.inhabitant.garden-artwork { z-index:4; }
+.garden-listener { z-index:5; }
 .growth-habitat { opacity:.8; fill:none; stroke:none; }
 [data-growth-stage] .growth-habitat { opacity:.8; }
 .growth-habitat image { pointer-events:none; }

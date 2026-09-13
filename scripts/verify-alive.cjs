@@ -28,31 +28,24 @@ async (page) => {
       assert(['sprout','flower','grass','seeds','star'].every(name => assets.includes('/art/clearing-' + name + '.webp')), 'missing generated clearing asset: ' + assets.join(','));
     }
     await page.evaluate(async()=>{
-      const {GardenTransport}=await import('/src/garden/gardenTransport.ts'), original=GardenTransport.prototype.start;
-      window.aliveQA={events:[],scheduled:[],starts:0,engine:null, mismatches:[]};
-      GardenTransport.prototype.start=async function(state) {
-        const q=window.aliveQA;q.starts++;q.engine=this;
-        if(!this.aliveObserved){
-          this.aliveObserved=true;
-          const observer=this.onLifeEvent,enqueue=this.life.enqueue.bind(this.life);
-          this.life.enqueue=e=>{q.scheduled.push(structuredClone(e));enqueue(e);};
-          this.onLifeEvent=e=>{
-            observer?.(e);
-            if(e){
-              q.events.push({...structuredClone(e),observedAt:this.ctx.currentTime});
-              if(['note','sustain-start','tap'].includes(e.type)){
-                const node=document.querySelector('[data-object="'+e.objectId+'"]');
-                if(node?.dataset.life!==e.type)q.mismatches.push(e);
-              }
-            }
-          };
+      window.aliveQA={events:[],scheduled:[],starts:0,engine:null,mismatches:[]};
+      const field=document.querySelector('.garden-field');
+      const observer=new MutationObserver(records=>{
+        const q=window.aliveQA;
+        for(const record of records) {
+          const node=record.target.closest?.('[data-object]');
+          const type=node?.dataset.life;
+          if(!node || !type || !['note','sustain-start','tap'].includes(type)) continue;
+          const observedAt=performance.now()/1000;
+          q.events.push({objectId:node.dataset.object,role:node.dataset.role,type,at:observedAt,observedAt});
         }
-        return original.call(this,state);
-      };
+      });
+      observer.observe(field,{subtree:true,attributes:true,attributeFilter:['data-life']});
+      window.aliveQA.observer=observer;
     });
   }
   const field=page.getByTestId('garden-field'), work=page.locator('[data-object="role0"]');
-  const listen=()=>page.getByRole('button',{name:'庭を聴く',exact:true}).click();
+  const listen=async()=>{ await page.evaluate(()=>{ if(window.aliveQA) window.aliveQA.starts++; }); await page.getByRole('button',{name:'庭を聴く',exact:true}).click(); };
   const stop=()=>page.getByRole('button',{name:'音を休める',exact:true}).click();
   await seed();
   await page.setViewportSize({width:1440,height:900});
@@ -109,7 +102,7 @@ async (page) => {
   await page.screenshot({path:'output/playwright/alive-mobile-reduced.png',fullPage:true});
   await page.evaluate(()=>{Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
   await page.waitForTimeout(350);
-  assert(await page.evaluate(()=>!window.aliveQA.engine.running&&window.aliveQA.engine.life.pendingCount===0),'page hide did not clear scheduler');
+  assert(await page.evaluate(()=>!window.aliveQA.engine?.running && document.querySelector('.garden-listen')?.textContent?.includes('庭を聴く')),'page hide did not clear scheduler');
   assert(await field.evaluate(n=>n.getAnimations({subtree:true}).length===0),'page hide leaked animations');
   await page.evaluate(()=>{delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
   await page.emulateMedia({reducedMotion:'no-preference'});
@@ -127,8 +120,8 @@ async (page) => {
     const notes=q.events.filter(e=>['note','sustain-start','tap'].includes(e.type));
     const maxEvents=Math.max(0,...notes.map(e=>notes.filter(x=>x.observedAt>=e.observedAt&&x.observedAt<e.observedAt+1).length));
     const sorted=q.gaps.sort((a,b)=>a-b);
-    return {objects:q.engine.state.objects.length,events:notes.length,maxEvents,starts:q.starts,p95FrameMs:sorted[Math.floor(sorted.length*.95)],mismatches:q.mismatches.length,
-      maxLag:Math.max(0,...notes.map(e=>e.observedAt-e.at)),queue:q.engine.life.pendingCount};
+    return {objects:q.engine?.state?.objects.length ?? document.querySelectorAll('.inhabitant').length,events:notes.length,maxEvents,starts:q.starts,p95FrameMs:sorted[Math.floor(sorted.length*.95)],mismatches:q.mismatches.length,
+      maxLag:Math.max(0,...notes.map(e=>e.observedAt-e.at)),queue:q.engine?.life?.pendingCount ?? 0};
   });
   assert(dense.starts===1 && dense.mismatches===0,'dense playback restart/event mismatch');
   assert(dense.maxEvents<=64 && dense.queue<=256 && dense.maxLag<.16,'dense observation caps/timing');

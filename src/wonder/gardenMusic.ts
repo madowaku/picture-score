@@ -21,7 +21,8 @@ export function applyGardenWonder(base: EnsemblePlan, state: GardenState, effect
     const span = Math.max(1, ...input.map(n => n.beat + n.duration));
     const notes: ArrangementNote[] = input.map(n => {
       const at = Math.min(width - .25, Math.round(n.beat / span * (width - .25) * 4) / 4);
-      return { ...n, beat: start + at, duration: Math.min(width - at, Math.max(.125, n.duration * width / span)), velocity: n.velocity * (effect.rule === 'garden-triad-round' && slot === 2 ? .65 : .9) };
+      return { ...n, beat: start + at, duration: Math.min(width - at, Math.max(.125, n.duration * width / span)), velocity: n.velocity * (effect.rule === 'garden-triad-round' && slot === 2 ? .65 : .9),
+        formation: effect.rule, formationIds: [...effect.objectIds] };
     });
     const strength = original.strength * (1 - effect.strength) + effect.strength;
     const blend = [
