@@ -77,6 +77,9 @@ jobs:
       - name: Verify SCORE BLOOM
         run: playwright-cli -s=release run-code --filename scripts/verify-score-bloom.cjs
 
+      - name: Verify Core Meaning
+        run: playwright-cli -s=release run-code --filename scripts/verify-core-meaning.cjs
+
       - name: Regress CLEARING
         run: playwright-cli -s=release run-code --filename scripts/verify-clearing.cjs
 
