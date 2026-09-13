@@ -56,7 +56,10 @@ const validateRole = (role: PaletteRole, definition: RoleDefinition): void => {
       unit(asset.anchor.x, `palette role ${role} anchor.x`);
       unit(asset.anchor.y, `palette role ${role} anchor.y`);
     }
-    if (asset.baseScale !== undefined && asset.baseScale <= 0)
+    if (
+      asset.baseScale !== undefined &&
+      !(finite(asset.baseScale, `palette role ${role} baseScale`) > 0)
+    )
       throw new Error(`palette role ${role} baseScale must be > 0`);
   }
 
@@ -103,7 +106,7 @@ export function validatePaletteDefinition(
   }
   if (!Number.isInteger(definition.limits.total) || definition.limits.total < 0)
     throw new Error("palette total limit must be a non-negative integer");
-  if (definition.limits.total > roleLimitSum && roleLimitSum > 0)
+  if (definition.limits.total > roleLimitSum)
     throw new Error("palette total limit cannot exceed the sum of role limits");
 
   return definition;
