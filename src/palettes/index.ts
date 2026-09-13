@@ -1,3 +1,4 @@
+export { clearingPalette, createOfficialPaletteRegistry } from "./clearing";
 export { fixtureCrystalPalette, fixtureGardenPalette } from "./fixtures";
 export { PaletteRegistry } from "./registry";
 export { createPaletteRuntime, resolveMotionProfile } from "./runtime";
