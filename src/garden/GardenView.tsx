@@ -12,6 +12,7 @@ import { clearingPath, gardenClearings, gardenLayout } from "./clearing";
 import { ClearingMask } from "./ClearingMask";
 import { useId } from "react";
 import { GrowthLayer } from "./GrowthLayer";
+import { GardenScoreBloomBridge } from "./GardenScoreBloomBridge";
 import { WeaveLayer } from "./WeaveLayer";
 import { WEAVE_KEY, WeaveEvidence, loadWeave } from "./weave";
 import type { WeaveState } from "./weave";
@@ -419,6 +420,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
       </svg>
       <WeaveLayer garden={garden} growth={growth} weave={weave} moments={growthMoments} clearings={clearings} layout={layout} life={life.current} />
       <GrowthLayer garden={garden} growth={growth} moments={growthMoments} clearings={clearings} layout={layout} />
+      <GardenScoreBloomBridge active={active} playing={playing} garden={garden} transport={transport.current} clearings={clearings} layout={layout} />
       <GardenLifeLayer garden={garden} life={life.current} clearings={clearings} />
       <svg className="ensemble-links" viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true">
         <ClearingMask id={relationMask} clearings={clearings} />
