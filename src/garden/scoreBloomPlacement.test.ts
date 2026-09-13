@@ -4,7 +4,7 @@ import type { PaletteRole } from "../palettes";
 import type { WorldEntity } from "../world/runtime";
 import { intersectsClearing } from "./clearing";
 import type { Clearing, GardenLayout } from "./clearing";
-import { resolvePalettePlacement, resolvePalettePlacements } from "./scoreBloomPlacement";
+import { resolvePalettePosition, resolvePalettePlacements } from "./scoreBloomPlacement";
 
 const layout: GardenLayout = {
   width: 1000,
