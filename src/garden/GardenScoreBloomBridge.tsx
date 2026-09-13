@@ -157,7 +157,7 @@ export function GardenScoreBloomBridge({
       musicalEvents={source.timeline.events}
       paused={transport.paused}
       phraseDuration={source.timeline.duration}
-      onTogglePause={() => { void togglePause(); }}
+      onTogglePause={() => { void togglePause().catch(() => undefined); }}
       onSeek={explicitSeek}
       onRestart={() => explicitSeek(0)}
     />}
