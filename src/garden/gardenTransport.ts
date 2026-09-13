@@ -37,39 +37,104 @@ export class GardenTransport {
   private tapVoices = new Set<OscillatorNode>();
   private spotlightId?: string;
   private spotlightUntil = -1;
+  private pausedState = false;
+  private pausedBeat = 0;
   onHeard?: (slice: HeardSlice | null) => void;
   private life = new GardenLifeBridge();
+
+  constructor(private readonly contextFactory: () => AudioContext = () => new AudioContext()) {}
+
   get onLifeEvent() { return this.life.onEvent; }
   set onLifeEvent(listener: ((event: GardenLifeEvent | null) => void) | undefined) { this.life.onEvent = listener; }
   private startLife() {
     this.life.start(() => this.ctx!.currentTime, event => {
-      if (!this.running || document.hidden || this.ctx?.state !== 'running') return false;
+      if (!this.running || this.pausedState || document.hidden || this.ctx?.state !== 'running') return false;
       const lane = this.lanes.get(event.objectId);
       return !!lane && (event.type === 'tap' || event.type === 'spotlight' ||
         lane.gain.gain.value * (event.layer ? lane[event.layer].gain.value : 1) > .015);
     });
   }
   running = false;
-  get beat() { return this.running && this.ctx && this.state ? Math.max(0, (this.ctx.currentTime - this.startTime) * this.state.bpm / 60) : 0; }
+  get paused() { return this.pausedState; }
+  get beat() {
+    if (!this.running || !this.ctx || !this.state) return 0;
+    if (this.pausedState) return this.pausedBeat;
+    return Math.max(0, (this.ctx.currentTime - this.startTime) * this.state.bpm / 60);
+  }
+  get time() { return this.state ? this.beat * 60 / this.state.bpm : 0; }
   get plan() { return this.currentPlan; }
   isSounding(id: string) {
     const lane = this.lanes.get(id), now = this.ctx?.currentTime ?? 0;
-    return !!(this.running && lane && lane.gain.gain.value > .015 &&
+    return !!(this.running && !this.pausedState && lane && lane.gain.gain.value > .015 &&
       lane.activity.some((event) => event.at <= now && event.until > now && lane[event.layer].gain.value > .025));
   }
   async start(state: GardenState) {
     this.stop();
     const generation = ++this.generation;
-    if (!this.ctx) { this.ctx = new AudioContext(); this.master = outputBus(this.ctx); }
+    if (!this.ctx) { this.ctx = this.contextFactory(); this.master = outputBus(this.ctx); }
     await this.ctx.resume();
     if (generation !== this.generation) return;
     this.state = state;
     this.startTime = this.ctx.currentTime + 0.06;
+    this.pausedState = false;
+    this.pausedBeat = 0;
     this.running = true;
     this.startLife();
     this.update(state);
     this.schedule();
     this.timer = setInterval(() => this.schedule(), 25);
+  }
+  async pause() {
+    if (!this.running || !this.ctx || this.pausedState) return;
+    const generation = this.generation;
+    this.pausedBeat = this.beat;
+    this.pausedState = true;
+    try {
+      await this.ctx.suspend();
+    } catch (error) {
+      if (generation === this.generation) this.pausedState = false;
+      throw error;
+    }
+  }
+  async resume() {
+    if (!this.running || !this.ctx || !this.state || !this.pausedState) return;
+    const generation = this.generation;
+    await this.ctx.resume();
+    if (generation !== this.generation || !this.running) return;
+    this.startTime = this.ctx.currentTime - this.pausedBeat * 60 / this.state.bpm;
+    this.pausedState = false;
+  }
+  seek(timeSeconds: number) {
+    if (!Number.isFinite(timeSeconds)) throw new Error("transport seek time must be finite");
+    if (!this.running || !this.ctx || !this.state) return;
+    const target = Math.max(0, timeSeconds);
+    const seconds = 60 / this.state.bpm;
+    const targetBeat = target / seconds;
+
+    for (const lane of this.lanes.values()) {
+      this.clearVoices(lane);
+      lane.gain.gain.cancelScheduledValues(this.ctx.currentTime);
+      lane.free.gain.cancelScheduledValues(this.ctx.currentTime);
+      lane.ensemble.gain.cancelScheduledValues(this.ctx.currentTime);
+    }
+    this.tapVoices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
+    this.tapVoices.clear();
+
+    this.startTime = this.ctx.currentTime - targetBeat * seconds;
+    this.pausedBeat = targetBeat;
+    this.next = Math.ceil(targetBeat * 4 - 1e-9) / 4;
+    for (const lane of this.lanes.values()) lane.next = this.next;
+    this.planBeat = -1;
+    this.currentPlan = undefined;
+    this.spatialStability = new StableGardenRelations();
+    this.spatialEffects = [];
+    this.heardTick = -1;
+    this.spotlightId = undefined;
+    this.spotlightUntil = -1;
+    this.onHeard?.(null);
+    this.startLife();
+    this.applyMix();
+    if (!this.pausedState) this.schedule();
   }
   update(state: GardenState) {
     if (this.running && this.state && this.ctx && this.state.bpm !== state.bpm) {
@@ -77,6 +142,7 @@ export class GardenTransport {
       this.startTime = this.ctx.currentTime - beat * 60 / state.bpm;
       this.next = Math.ceil(beat * 4 - .0001) / 4;
       this.planBeat = -1;
+      if (this.pausedState) this.pausedBeat = beat;
       this.startLife();
       for (const lane of this.lanes.values()) {
         this.clearVoices(lane);
@@ -135,7 +201,7 @@ export class GardenTransport {
 
   /** Audition one or two placed works. A running garden shares its next quarter boundary. */
   ping(ids: string | string[]) {
-    if (!this.ctx || !this.master || !this.state) return;
+    if (!this.ctx || !this.master || !this.state || this.pausedState) return;
     const requested = Array.isArray(ids) ? ids : [ids];
     const unique = [...new Set(requested)].map((id) => this.lanes.get(id)).filter((lane): lane is Lane => !!lane);
     if (!unique.length) return;
@@ -225,7 +291,7 @@ export class GardenTransport {
     }
   }
   private schedule() {
-    if (!this.running || !this.ctx || !this.state) return;
+    if (!this.running || this.pausedState || !this.ctx || !this.state) return;
     this.observeHeard();
     this.applyMix();
     const ctx = this.ctx, seconds = 60 / this.state.bpm;
@@ -278,7 +344,7 @@ export class GardenTransport {
   }
   stop() {
     this.life.clear();
-    this.generation++; this.running = false; clearInterval(this.timer);
+    this.generation++; this.running = false; this.pausedState = false; this.pausedBeat = 0; clearInterval(this.timer);
     for (const lane of this.lanes.values()) {
       this.clearVoices(lane);
       lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect();
