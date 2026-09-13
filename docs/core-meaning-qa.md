@@ -20,11 +20,13 @@ Run the development server and open:
 
 The page intentionally starts blind. Scene buttons show only A–E. Do not press **Reveal answer** until the reviewer has committed to an interpretation.
 
+The page includes a small **QA-only reference sonification** of the same Musical IR that drives SCORE BLOOM. It is not a production playback engine and it does not feed the world back through audio analysis. Its only purpose is to let the reviewer hear the semantic stimulus while seeing the resulting world, so the test measures audio-to-world meaning instead of visual guessing.
+
 ## Human acceptance test
 
 Use a reviewer who has not been shown Picture Score's semantic legend immediately before the test.
 
-1. Show Scenes A–E for roughly 6–10 seconds each. Replay is allowed once.
+1. Play Scenes A–E for roughly 6–10 seconds each with sound. Replay is allowed once.
 2. Do not explain what sprouts, flowers, seeds, stars or grass mean.
 3. Ask the reviewer to identify which visual behavior represents:
    - melody activity
