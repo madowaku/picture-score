@@ -10,9 +10,9 @@ import { CoreMeaningQaAudio } from "./coreMeaningQaAudio";
 import { coreMeaningFixtures } from "./coreMeaningFixtures";
 import "./coreMeaningQa.css";
 
-const layout: GardenLayout = {
-  width: 1000,
-  height: 620,
+const initialLayout: GardenLayout = {
+  width: 390,
+  height: 470,
   artworkWidth: 120,
   artworkHeight: 96,
 };
@@ -34,6 +34,8 @@ export function CoreMeaningQaView() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [layout, setLayout] = useState<GardenLayout>(initialLayout);
+  const stageRef = useRef<HTMLElement | null>(null);
   const audioRef = useRef<CoreMeaningQaAudio | null>(null);
   if (!audioRef.current) audioRef.current = new CoreMeaningQaAudio();
   const fixture = coreMeaningFixtures[fixtureIndex];
@@ -54,6 +56,27 @@ export function CoreMeaningQaView() {
   const [snapshot, setSnapshot] = useState<WorldSnapshot>(() => session.snapshot());
 
   useEffect(() => () => audioRef.current?.dispose(), []);
+
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+
+    const publishSize = () => {
+      const rect = stage.getBoundingClientRect();
+      const width = Math.max(1, rect.width);
+      const height = Math.max(1, rect.height);
+      setLayout(previous =>
+        Math.abs(previous.width - width) < 0.5 && Math.abs(previous.height - height) < 0.5
+          ? previous
+          : { ...previous, width, height },
+      );
+    };
+
+    publishSize();
+    const observer = new ResizeObserver(publishSize);
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     audioRef.current?.stop();
@@ -175,7 +198,11 @@ export function CoreMeaningQaView() {
       </button>)}
     </nav>
 
-    <section className="core-meaning-qa-stage" aria-label={`Scene ${fixture.blindLabel} visual world`}>
+    <section
+      ref={stageRef}
+      className="core-meaning-qa-stage"
+      aria-label={`Scene ${fixture.blindLabel} visual world`}
+    >
       <ScoreBloomLayer
         snapshot={snapshot}
         palette={clearingPalette}
