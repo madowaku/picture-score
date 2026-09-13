@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { ScoreBloomLayer } from "../garden/ScoreBloomLayer";
 import type { Clearing, GardenLayout } from "../garden/clearing";
@@ -6,6 +6,7 @@ import { clearingPalette } from "../palettes";
 import type { PaletteRole } from "../palettes";
 import { ScoreBloomSession } from "../world/runtime";
 import type { WorldSnapshot } from "../world/runtime";
+import { CoreMeaningQaAudio } from "./coreMeaningQaAudio";
 import { coreMeaningFixtures } from "./coreMeaningFixtures";
 import "./coreMeaningQa.css";
 
@@ -33,6 +34,8 @@ export function CoreMeaningQaView() {
   const [reducedMotion, setReducedMotion] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<CoreMeaningQaAudio | null>(null);
+  if (!audioRef.current) audioRef.current = new CoreMeaningQaAudio();
   const fixture = coreMeaningFixtures[fixtureIndex];
 
   const session = useMemo(() => {
@@ -50,7 +53,10 @@ export function CoreMeaningQaView() {
   const [time, setTime] = useState(0);
   const [snapshot, setSnapshot] = useState<WorldSnapshot>(() => session.snapshot());
 
+  useEffect(() => () => audioRef.current?.dispose(), []);
+
   useEffect(() => {
+    audioRef.current?.stop();
     setPlaying(false);
     setTime(0);
     setSnapshot(session.snapshot());
@@ -78,6 +84,7 @@ export function CoreMeaningQaView() {
       }
 
       if (nextTime >= fixture.timeline.duration) {
+        audioRef.current?.stop();
         setPlaying(false);
         return;
       }
@@ -89,12 +96,14 @@ export function CoreMeaningQaView() {
   }, [fixture.timeline.duration, playing, session]);
 
   const chooseFixture = (index: number) => {
+    audioRef.current?.stop();
     setFixtureIndex(index);
     setRevealed(false);
   };
 
   const seek = (event: ChangeEvent<HTMLInputElement>) => {
     const nextTime = Number(event.currentTarget.value);
+    audioRef.current?.stop();
     setPlaying(false);
     session.seek(nextTime);
     setTime(nextTime);
@@ -102,6 +111,7 @@ export function CoreMeaningQaView() {
   };
 
   const restart = () => {
+    audioRef.current?.stop();
     setPlaying(false);
     session.seek(0);
     setTime(0);
@@ -110,14 +120,20 @@ export function CoreMeaningQaView() {
 
   const togglePlay = () => {
     if (playing) {
+      audioRef.current?.stop();
       setPlaying(false);
       return;
     }
-    if (session.time >= fixture.timeline.duration) {
+
+    let startTime = session.time;
+    if (startTime >= fixture.timeline.duration) {
       session.seek(0);
+      startTime = 0;
       setTime(0);
       setSnapshot(session.snapshot());
     }
+
+    void audioRef.current?.play(fixture.timeline, startTime).catch(() => undefined);
     setPlaying(true);
   };
 
@@ -132,8 +148,8 @@ export function CoreMeaningQaView() {
     <header className="core-meaning-qa-header">
       <div>
         <p className="core-meaning-qa-kicker">PICTURE SCORE • CORE MEANING QA</p>
-        <h1>Can you read the music without a legend?</h1>
-        <p>Watch first. Reveal the intended meaning only after you have made a guess.</p>
+        <h1>Can you hear what the world means?</h1>
+        <p>Listen and watch first. Reveal the intended meaning only after you have made a guess.</p>
       </div>
       <label className="core-meaning-qa-reduced">
         <input
