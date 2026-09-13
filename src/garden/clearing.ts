@@ -105,7 +105,7 @@ export function habitatMarks(object: MusicalObject, stage: number, owner: Cleari
   return Array.from({ length: count }, (_, index) => {
     const angle = seed(object.id) * Math.PI * 2 + index * 2.399963229728653;
     const small = role === 'rhythm' || role === 'ornament';
-    const pixels = ((small ? 32 : 40) + (stage - 1) * 2) * (asset.baseScale ?? 1);
+    const pixels = (small ? 32 : 40) + (stage - 1) * 2;
     const width = pixels * 1000 / layout.width;
     const height = pixels * (role === 'harmony' ? .7 : 1) * 1000 / layout.height;
     // Include the entire sprite rectangle, not just its centre, in exclusion checks.
