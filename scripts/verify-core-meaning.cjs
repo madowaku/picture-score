@@ -14,14 +14,14 @@ async (page) => {
 
   async function choose(id) {
     await page.locator(`[data-qa-fixture-id="${id}"]`).click();
-    await page.waitForTimeout(60);
+    await page.waitForTimeout(80);
     assert(await page.locator('[data-qa-answer]').count() === 0, 'blind answer leaked for '+id);
   }
 
   async function seek(time) {
     const slider = page.getByRole('slider',{name:'Core Meaning QA time'});
     await slider.fill(String(time));
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(120);
   }
 
   async function seekEnd() {
@@ -35,12 +35,20 @@ async (page) => {
       const nodes=[...document.querySelectorAll('[data-score-bloom-entity]')];
       const counts={melody:0,harmony:0,rhythm:0,ornament:0,resonance:0};
       for(const node of nodes) counts[node.getAttribute('data-score-bloom-role')]++;
+      const visualSizes=nodes.map(node=>{
+        const box=node.querySelector('image')?.getBoundingClientRect();
+        return box ? Math.min(box.width,box.height) : 0;
+      }).sort((a,b)=>a-b);
+      const medianVisualSize=visualSizes.length
+        ? visualSizes[Math.floor(visualSizes.length/2)]
+        : 0;
       return {
         total:nodes.length,
         counts,
         roles:Object.entries(counts).filter(([,value])=>value>0).map(([role])=>role),
         motions:nodes.map(node=>node.getAttribute('data-score-bloom-motion')),
         births:nodes.map(node=>node.getAttribute('data-score-bloom-birth')),
+        medianVisualSize,
         overflow:document.documentElement.scrollWidth-innerWidth,
       };
     });
@@ -49,6 +57,7 @@ async (page) => {
   function semanticAssertions(id, value, viewport) {
     const non = role => value.total-value.counts[role];
     assert(value.overflow <= 0, `horizontal overflow ${id} ${viewport.width}`);
+    assert(value.total===0 || value.medianVisualSize>=20,`semantic marks too small to read ${id} ${viewport.width}: ${value.medianVisualSize}`);
     if(id==='quiet-piano') {
       assert(value.total>0 && value.total<=5,'quiet is not visually quiet: '+JSON.stringify(value));
       assert(value.counts.rhythm===0 && value.counts.ornament===0 && value.counts.resonance===0,'quiet leaked unrelated roles');
