@@ -108,6 +108,19 @@ export function CoreMeaningQaView() {
     setSnapshot(session.snapshot());
   };
 
+  const togglePlay = () => {
+    if (playing) {
+      setPlaying(false);
+      return;
+    }
+    if (session.time >= fixture.timeline.duration) {
+      session.seek(0);
+      setTime(0);
+      setSnapshot(session.snapshot());
+    }
+    setPlaying(true);
+  };
+
   const counts = roleCounts(snapshot);
 
   return <main
@@ -165,7 +178,7 @@ export function CoreMeaningQaView() {
 
     <section className="core-meaning-qa-transport" aria-label="Core Meaning QA transport">
       <div className="core-meaning-qa-buttons">
-        <button type="button" onClick={() => setPlaying(value => !value)}>
+        <button type="button" onClick={togglePlay}>
           {playing ? "Pause" : time >= fixture.timeline.duration ? "Replay" : "Play"}
         </button>
         <button type="button" onClick={restart}>Restart</button>
