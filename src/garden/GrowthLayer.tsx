@@ -30,7 +30,8 @@ export const GrowthLayer = memo(function GrowthLayer({ garden, growth, moments, 
           data-growth-stage={stage} data-growth-role={object.musicalRole}>
           <g className={`growth-habitat growth-${object.musicalRole} ${moments.has(object.id) ? 'growth-moment' : ''}`}>
             {habitats.get(object.id)?.map(mark => <image key={mark.index} data-habitat-mark={mark.index}
-              href={`/art/clearing-${mark.asset}.webp`} x={mark.x - mark.width / 2} y={mark.y - mark.height / 2}
+              data-palette-role={mark.role} data-palette-asset={mark.assetId}
+              href={mark.assetSrc} x={mark.x - mark.width / 2} y={mark.y - mark.height / 2}
               width={mark.width} height={mark.height} preserveAspectRatio="none" opacity={mark.opacity} />)}
           </g>
         </g>;
