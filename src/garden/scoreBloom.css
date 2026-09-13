@@ -1,0 +1,69 @@
+.score-bloom-layer {
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  pointer-events:none;
+}
+.score-bloom-layer * { pointer-events:none; }
+.score-bloom-birth,
+.score-bloom-idle {
+  transform-box:fill-box;
+  transform-origin:center;
+}
+.score-bloom-idle-none { animation:none; }
+.score-bloom-idle-sway { animation:score-bloom-sway var(--score-bloom-duration) ease-in-out infinite; }
+.score-bloom-idle-float { animation:score-bloom-float var(--score-bloom-duration) ease-in-out infinite; }
+.score-bloom-idle-pulse { animation:score-bloom-pulse var(--score-bloom-duration) ease-in-out infinite; }
+.score-bloom-idle-twinkle { animation:score-bloom-twinkle var(--score-bloom-duration) ease-in-out infinite; }
+
+.score-bloom-birth-none { animation:none; }
+.score-bloom-birth-fade { animation:score-bloom-birth-fade 420ms ease-out both; }
+.score-bloom-birth-grow { animation:score-bloom-birth-grow 520ms cubic-bezier(.18,.82,.24,1) both; }
+.score-bloom-birth-rise { animation:score-bloom-birth-rise 520ms cubic-bezier(.18,.82,.24,1) both; }
+.score-bloom-birth-pop { animation:score-bloom-birth-pop 360ms cubic-bezier(.16,.9,.28,1.18) both; }
+
+.score-bloom-debug-ring {
+  fill:none;
+  stroke:#d05c55;
+  stroke-width:2;
+  stroke-dasharray:7 5;
+  vector-effect:non-scaling-stroke;
+  opacity:.8;
+}
+
+@keyframes score-bloom-sway {
+  0%,100% { transform:translateX(calc(var(--score-bloom-amplitude) * -.35)) rotate(-1.2deg); }
+  50% { transform:translateX(calc(var(--score-bloom-amplitude) * .35)) rotate(1.2deg); }
+}
+@keyframes score-bloom-float {
+  0%,100% { transform:translateY(0); }
+  50% { transform:translateY(calc(var(--score-bloom-amplitude) * -1)); }
+}
+@keyframes score-bloom-pulse {
+  0%,100% { transform:scale(1); opacity:.86; }
+  50% { transform:scale(calc(1 + var(--score-bloom-reaction) * .04)); opacity:1; }
+}
+@keyframes score-bloom-twinkle {
+  0%,100% { opacity:.58; transform:scale(.96); }
+  45% { opacity:1; transform:scale(1.04); }
+  62% { opacity:.72; transform:scale(1); }
+}
+@keyframes score-bloom-birth-fade {
+  from { opacity:0; }
+  to { opacity:1; }
+}
+@keyframes score-bloom-birth-grow {
+  from { opacity:0; transform:scale(.62); }
+  to { opacity:1; transform:scale(1); }
+}
+@keyframes score-bloom-birth-rise {
+  from { opacity:0; transform:translateY(12px) scale(.9); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes score-bloom-birth-pop {
+  0% { opacity:0; transform:scale(.58); }
+  72% { opacity:1; transform:scale(1.08); }
+  100% { opacity:1; transform:scale(1); }
+}
