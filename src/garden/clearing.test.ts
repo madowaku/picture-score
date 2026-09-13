@@ -3,7 +3,18 @@ import { emptyGarden, makeObject } from './gardenState';
 import { emptyGrowth } from './growth';
 import { emptyProject } from '../music/project';
 import { exampleStrokes } from '../music/examples';
-import { artworkBounds, artworkClearing, artworkSize, clearingPath, gardenClearings, gardenHabitats, gardenLayout, habitatMarks, intersectsClearing } from './clearing';
+import {
+  artworkBounds,
+  artworkClearing,
+  artworkSize,
+  clearingPaletteRole,
+  clearingPath,
+  gardenClearings,
+  gardenHabitats,
+  gardenLayout,
+  habitatMarks,
+  intersectsClearing,
+} from './clearing';
 import type { Stroke } from '../music/types';
 
 const line = (points: number[][]): Stroke[] => [{ id: 'line', points: points.map(([x, y], time) => ({ x, y, time, pressure: .5 })) }];
@@ -28,6 +39,7 @@ describe('CLEARING rendering geometry', () => {
     }
     expect(objects).toEqual(before);
   });
+
   it('matures outward at stable angles and keeps no more than eight marks', () => {
     const layout = gardenLayout(390, 844), object = objects[0];
     const early = artworkClearing(object, 1, layout), mature = artworkClearing(object, 3, layout);
@@ -39,6 +51,7 @@ describe('CLEARING rendering geometry', () => {
     });
     expect(habitatMarks(object, 3, mature, layout)).toEqual(last);
   });
+
   it('omits conflicting marks in a close pair and a dense twelve-work garden', () => {
     for (const close of [false, true]) {
       const garden = { ...emptyGarden(), objects: Array.from({ length: close ? 2 : 12 }, (_, i) =>
@@ -57,14 +70,25 @@ describe('CLEARING rendering geometry', () => {
       expect({ garden, growth }).toEqual(before);
     }
   });
-  it('uses a distinct generated watercolor for every musical role', () => {
+
+  it('bridges every legacy Garden role to the official Clearing palette asset', () => {
     const layout = gardenLayout(390, 844), owner = artworkClearing(objects[0], 3, layout);
-    const expected = new Map([['melody', 'sprout'], ['harmony', 'flower'], ['drone', 'grass'], ['rhythm', 'seeds'], ['decoration', 'star']]);
-    for (const [role, asset] of expected) {
-      const object = { ...objects[0], musicalRole: role as typeof objects[0]['musicalRole'] };
-      expect(habitatMarks(object, 3, owner, layout).every(mark => mark.asset === asset)).toBe(true);
+    const expected = new Map([
+      ['melody', ['melody', '/art/clearing-sprout.webp']],
+      ['harmony', ['harmony', '/art/clearing-flower.webp']],
+      ['drone', ['resonance', '/art/clearing-grass.webp']],
+      ['rhythm', ['rhythm', '/art/clearing-seeds.webp']],
+      ['decoration', ['ornament', '/art/clearing-star.webp']],
+    ] as const);
+    for (const [legacyRole, [paletteRole, src]] of expected) {
+      const object = { ...objects[0], musicalRole: legacyRole as typeof objects[0]['musicalRole'] };
+      expect(clearingPaletteRole(object.musicalRole)).toBe(paletteRole);
+      const marks = habitatMarks(object, 3, owner, layout);
+      expect(marks.every(mark => mark.role === paletteRole)).toBe(true);
+      expect(marks.every(mark => mark.assetSrc === src)).toBe(true);
     }
   });
+
   it('connects ellipse edges and suppresses overlapping or coincident clearings', () => {
     const a = { id: 'a', x: 200, y: 200, rx: 90, ry: 62 }, b = { ...a, id: 'b', x: 700, y: 450 };
     const path = clearingPath(a, b, .7)!;

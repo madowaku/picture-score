@@ -1,10 +1,39 @@
-import type { GardenState, MusicalObject } from './gardenState';
+import type { PaletteRole } from '../palettes';
+import { clearingPalette } from '../palettes';
+import type { GardenState, MusicalObject, MusicalRole } from './gardenState';
 import type { GrowthState } from './growth';
 import { growthStage } from './growth';
 
 export interface GardenLayout { width: number; height: number; artworkWidth: number; artworkHeight: number }
 export interface Clearing { id: string; x: number; y: number; rx: number; ry: number }
-export interface HabitatMark { index: number; x: number; y: number; width: number; height: number; asset: string; opacity: number }
+export interface HabitatMark {
+  index: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  role: PaletteRole;
+  assetId: string;
+  assetSrc: string;
+  opacity: number;
+}
+
+/** Bridges the legacy Garden classifier to SCORE BLOOM's neutral palette roles. */
+export function clearingPaletteRole(role: MusicalRole): PaletteRole {
+  switch (role) {
+    case 'melody': return 'melody';
+    case 'harmony': return 'harmony';
+    case 'rhythm': return 'rhythm';
+    case 'decoration': return 'ornament';
+    case 'drone': return 'resonance';
+  }
+}
+
+function clearingAsset(role: PaletteRole) {
+  const asset = clearingPalette.roles[role].assets[0];
+  if (!asset) throw new Error(`Clearing palette has no asset for ${role}`);
+  return asset;
+}
 
 /** Mirrors the garden's responsive CSS. No DOM measurement or animation-frame reads. */
 export function gardenLayout(width: number, height: number): GardenLayout {
@@ -71,20 +100,27 @@ export function intersectsClearing(mark: Pick<HabitatMark, 'x' | 'y' | 'width' |
 export function habitatMarks(object: MusicalObject, stage: number, owner: Clearing, layout: GardenLayout): HabitatMark[] {
   if (!stage) return [];
   const count = stage === 1 ? 3 : stage === 2 ? 6 : 8;
+  const role = clearingPaletteRole(object.musicalRole);
+  const asset = clearingAsset(role);
   return Array.from({ length: count }, (_, index) => {
     const angle = seed(object.id) * Math.PI * 2 + index * 2.399963229728653;
-    const small = object.musicalRole === 'rhythm' || object.musicalRole === 'decoration';
+    const small = role === 'rhythm' || role === 'ornament';
     const pixels = (small ? 32 : 40) + (stage - 1) * 2;
     const width = pixels * 1000 / layout.width;
-    const height = pixels * (object.musicalRole === 'harmony' ? .7 : 1) * 1000 / layout.height;
+    const height = pixels * (role === 'harmony' ? .7 : 1) * 1000 / layout.height;
     // Include the entire sprite rectangle, not just its centre, in exclusion checks.
     let distance = 5 + stage * 7;
-    const mark = { index, x: 0, y: 0, width, height,
-      asset: object.musicalRole === 'decoration' ? 'star' :
-        object.musicalRole === 'harmony' ? 'flower' :
-        object.musicalRole === 'drone' ? 'grass' :
-        object.musicalRole === 'rhythm' ? 'seeds' : 'sprout',
-      opacity: object.musicalRole === 'decoration' ? .58 : .72 };
+    const mark: HabitatMark = {
+      index,
+      x: 0,
+      y: 0,
+      width,
+      height,
+      role,
+      assetId: asset.id,
+      assetSrc: asset.src,
+      opacity: role === 'ornament' ? .58 : .72,
+    };
     do {
       mark.x = owner.x + Math.cos(angle) * (owner.rx + distance);
       mark.y = owner.y + Math.sin(angle) * (owner.ry + distance);
