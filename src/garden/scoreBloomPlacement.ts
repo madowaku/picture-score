@@ -100,6 +100,12 @@ const intersectsArtwork = (
   }, clearing));
 };
 
+const screenRadius = (placement: ScoreBloomPlacement, layout: GardenLayout): number =>
+  Math.max(
+    placement.width * layout.width / 1000,
+    placement.height * layout.height / 1000,
+  ) / 2;
+
 const tooClose = (
   candidate: ScoreBloomPlacement,
   palette: PaletteDefinition,
@@ -109,18 +115,12 @@ const tooClose = (
 ): boolean => {
   const currentCenter = centerOf(candidate, palette, entity);
   const minDistance = palette.roles[entity.role].placement.minDistance;
-  const currentRadius = Math.hypot(
-    candidate.width * layout.width / 1000,
-    candidate.height * layout.height / 1000,
-  ) / 2;
+  const currentRadius = screenRadius(candidate, layout);
 
   return occupied.some(previous => {
     const dx = (currentCenter.x - previous.x) * layout.width / 1000;
     const dy = (currentCenter.y - previous.y) * layout.height / 1000;
-    const previousRadius = Math.hypot(
-      previous.width * layout.width / 1000,
-      previous.height * layout.height / 1000,
-    ) / 2;
+    const previousRadius = screenRadius(previous, layout);
     const previousDistance = palette.roles[previous.role].placement.minDistance;
     return Math.hypot(dx, dy) < currentRadius + previousRadius + Math.max(minDistance, previousDistance);
   });
@@ -153,7 +153,7 @@ const candidateAt = (
 
 /**
  * Resolve one semantic entity into stable Garden coordinates. Existing placements
- * are supplied in screen-independent order so min-distance decisions replay exactly.
+ * are supplied in stable order so min-distance decisions replay exactly.
  */
 export function resolvePalettePosition(
   entity: WorldEntity,
@@ -162,7 +162,8 @@ export function resolvePalettePosition(
   layout: GardenLayout,
   occupied: readonly OccupiedPlacement[] = [],
 ): ScoreBloomPlacement | null {
-  for (let attempt = 0; attempt < 25; attempt += 1) {
+  // Base candidate plus four deterministic eight-spoke rings.
+  for (let attempt = 0; attempt < 33; attempt += 1) {
     const candidate = candidateAt(entity, palette, layout, attempt);
     if (!insideGardenAndZone(candidate, palette, entity)) continue;
     if (intersectsArtwork(candidate, palette, entity, clearings)) continue;
