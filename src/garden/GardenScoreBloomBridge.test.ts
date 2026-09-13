@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { canonicalMusicalTimelineFixture } from "../music/ir/fixtures";
 import { clearingPalette } from "../palettes";
 import { ScoreBloomSession } from "../world/runtime";
-import { advanceGardenScoreBloom } from "./GardenScoreBloomBridge";
+import { advanceGardenScoreBloom, seekGardenScoreBloom } from "./GardenScoreBloomBridge";
 
 const session = () => new ScoreBloomSession({
   trackId: "garden-fixture",
@@ -47,5 +47,22 @@ describe("GardenScoreBloomBridge clock seam", () => {
     expect(rewind).not.toBeNull();
     expect(rewind!.snapshot.time).toBe(0.25);
     expect(rewind!.snapshot.entities).toHaveLength(0);
+  });
+
+  it("explicit seek moves transport and semantic session through one synchronization path", () => {
+    const current = session();
+    current.advanceTo(3);
+    const transport = {
+      time: 3,
+      seek(time: number) { this.time = Math.max(0, time); },
+    };
+
+    const frame = seekGardenScoreBloom(current, transport, 1);
+    const fresh = session();
+    fresh.seek(1);
+
+    expect(transport.time).toBe(1);
+    expect(frame.snapshot.time).toBe(1);
+    expect(frame.snapshot).toEqual(fresh.snapshot());
   });
 });
