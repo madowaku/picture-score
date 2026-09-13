@@ -18,8 +18,8 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     document.documentElement.lang = language;
     document.title = language === "ja"
-      ? "Picture Score — 線を、感じよう。"
-      : "Picture Score — Feel the line.";
+      ? "ピクスコ | Picture Score — 描くと、音が育つ。"
+      : "Picture Score — Draw a line. Grow a sound.";
     try {
       localStorage.setItem(LANGUAGE_KEY, language);
     } catch {
