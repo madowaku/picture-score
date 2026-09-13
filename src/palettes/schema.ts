@@ -13,6 +13,11 @@ export const PALETTE_ROLES: readonly PaletteRole[] = [
   "resonance",
 ];
 
+const PLACEMENT_ZONES = ["ground", "low", "middle", "upper", "sky", "any"] as const;
+const IDLE_MOTIONS = ["none", "sway", "float", "pulse", "twinkle"] as const;
+const BIRTH_MOTIONS = ["none", "fade", "grow", "rise", "pop"] as const;
+const REDUCED_MOTIONS = ["static", "fade-only"] as const;
+
 const finite = (value: number, label: string): number => {
   if (!Number.isFinite(value)) throw new Error(`${label} must be finite`);
   return value;
@@ -63,6 +68,8 @@ const validateRole = (role: PaletteRole, definition: RoleDefinition): void => {
       throw new Error(`palette role ${role} baseScale must be > 0`);
   }
 
+  if (!PLACEMENT_ZONES.includes(definition.placement.zone))
+    throw new Error(`palette role ${role} placement zone is unsupported`);
   unit(definition.placement.clustering, `palette role ${role} clustering`);
   nonNegative(definition.placement.minDistance, `palette role ${role} minDistance`);
   const [scaleMin, scaleMax] = definition.placement.scaleRange;
@@ -75,6 +82,12 @@ const validateRole = (role: PaletteRole, definition: RoleDefinition): void => {
   if (rotationMax < rotationMin)
     throw new Error(`palette role ${role} rotationRange is invalid`);
 
+  if (!IDLE_MOTIONS.includes(definition.motion.idleMotion))
+    throw new Error(`palette role ${role} idle motion is unsupported`);
+  if (!BIRTH_MOTIONS.includes(definition.motion.birthMotion))
+    throw new Error(`palette role ${role} birth motion is unsupported`);
+  if (!REDUCED_MOTIONS.includes(definition.motion.reducedMotion))
+    throw new Error(`palette role ${role} reduced motion is unsupported`);
   nonNegative(definition.motion.amplitude, `palette role ${role} amplitude`);
   nonNegative(definition.motion.speed, `palette role ${role} speed`);
   unit(definition.motion.responseStrength, `palette role ${role} responseStrength`);
