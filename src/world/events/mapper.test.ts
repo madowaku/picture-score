@@ -35,6 +35,17 @@ describe("WorldEvent mapper", () => {
     expect(second).toEqual(first);
   });
 
+  it("normalizes equivalent input ordering into the same world identity", () => {
+    const canonical = cloneFixture();
+    const shuffled = cloneFixture();
+    shuffled.frames.reverse();
+    shuffled.events.reverse();
+
+    expect(mapMusicalTimeline(shuffled, "track-a")).toEqual(
+      mapMusicalTimeline(canonical, "track-a"),
+    );
+  });
+
   it("changes world identity with a different track seed while preserving lineage", () => {
     const first = mapMusicalTimeline(cloneFixture(), "track-a");
     const second = mapMusicalTimeline(cloneFixture(), "track-b");
