@@ -95,7 +95,11 @@ const parseEvent = (value: unknown, duration: number): MusicalEvent => {
         ![1, 2, 4, 8, 16].includes(subdivision as number)
       )
         throw new Error("rhythm.subdivision is unsupported");
-      return { ...base, type: "rhythm", subdivision: subdivision as 1 | 2 | 4 | 8 | 16 | undefined };
+      return {
+        ...base,
+        type: "rhythm",
+        subdivision: subdivision as 1 | 2 | 4 | 8 | 16 | undefined,
+      };
     }
     case "melody": {
       const direction = value.direction;
@@ -119,7 +123,13 @@ const parseEvent = (value: unknown, duration: number): MusicalEvent => {
     }
     case "harmony": {
       const root = value.root;
-      if (root !== undefined && (!Number.isInteger(root) || root < 0 || root > 11))
+      if (
+        root !== undefined &&
+        (typeof root !== "number" ||
+          !Number.isInteger(root) ||
+          root < 0 ||
+          root > 11)
+      )
         throw new Error("harmony.root must be an integer from 0 to 11");
       if (value.quality !== undefined && typeof value.quality !== "string")
         throw new Error("harmony.quality must be a string");
@@ -130,7 +140,7 @@ const parseEvent = (value: unknown, duration: number): MusicalEvent => {
         changeAmount: normalizeUnitInterval(
           finite(value.changeAmount, "harmony.changeAmount"),
         ),
-        root: root as number | undefined,
+        root,
         quality: value.quality as string | undefined,
       };
     }
@@ -163,14 +173,21 @@ const parseEvent = (value: unknown, duration: number): MusicalEvent => {
         confidence: normalizeUnitInterval(
           finite(value.confidence, "section.confidence"),
         ),
-        energyDelta: Math.max(-1, Math.min(1, finite(value.energyDelta, "section.energyDelta"))),
+        energyDelta: Math.max(
+          -1,
+          Math.min(1, finite(value.energyDelta, "section.energyDelta")),
+        ),
       };
     }
+    default:
+      throw new Error("event.type is unsupported");
   }
 };
 
 const compareEvents = (a: MusicalEvent, b: MusicalEvent): number =>
-  a.time - b.time || EVENT_ORDER[a.type] - EVENT_ORDER[b.type] || a.id.localeCompare(b.id);
+  a.time - b.time ||
+  EVENT_ORDER[a.type] - EVENT_ORDER[b.type] ||
+  a.id.localeCompare(b.id);
 
 export function parseMusicalTimeline(value: unknown): MusicalTimeline {
   if (!isRecord(value)) throw new Error("MusicalTimeline must be an object");
@@ -179,19 +196,32 @@ export function parseMusicalTimeline(value: unknown): MusicalTimeline {
 
   const duration = nonNegative(value.duration, "timeline.duration");
   const bpm = value.bpm;
-  if (bpm !== undefined && (typeof bpm !== "number" || !Number.isFinite(bpm) || bpm <= 0))
+  if (
+    bpm !== undefined &&
+    (typeof bpm !== "number" || !Number.isFinite(bpm) || bpm <= 0)
+  )
     throw new Error("timeline.bpm must be a positive finite number");
   if (!Array.isArray(value.frames) || !Array.isArray(value.events))
     throw new Error("timeline frames/events must be arrays");
-  if (!isRecord(value.metadata) || typeof value.metadata.analysisVersion !== "string" || !value.metadata.analysisVersion.length)
+
+  const metadata = value.metadata;
+  if (
+    !isRecord(metadata) ||
+    typeof metadata.analysisVersion !== "string" ||
+    !metadata.analysisVersion.length
+  )
     throw new Error("timeline.metadata.analysisVersion is required");
 
-  const frames = value.frames.map((frame) => parseFrame(frame, duration)).sort((a, b) => a.time - b.time);
+  const frames = value.frames
+    .map((frame) => parseFrame(frame, duration))
+    .sort((a, b) => a.time - b.time);
   for (let i = 1; i < frames.length; i++)
     if (frames[i - 1].time === frames[i].time)
       throw new Error("frame times must be unique");
 
-  const events = value.events.map((event) => parseEvent(event, duration)).sort(compareEvents);
+  const events = value.events
+    .map((event) => parseEvent(event, duration))
+    .sort(compareEvents);
   const ids = new Set<string>();
   for (const event of events) {
     if (ids.has(event.id)) throw new Error("event ids must be unique");
@@ -204,7 +234,7 @@ export function parseMusicalTimeline(value: unknown): MusicalTimeline {
     ...(bpm === undefined ? {} : { bpm }),
     frames,
     events,
-    metadata: { analysisVersion: value.metadata.analysisVersion },
+    metadata: { analysisVersion: metadata.analysisVersion },
   };
 }
 
