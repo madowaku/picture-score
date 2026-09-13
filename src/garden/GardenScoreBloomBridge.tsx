@@ -13,15 +13,16 @@ const frameOf = (session: ScoreBloomSession): ScoreBloomFrame => ({
   snapshot: session.snapshot(),
 });
 
-/** Advance the semantic clock and publish only when visible semantic state changed. */
+/** Advance normally; a rewind always publishes one reconstructed frame. */
 export function advanceGardenScoreBloom(
   session: ScoreBloomSession,
   time: number,
 ): ScoreBloomFrame | null {
-  const changed = time + 1e-9 < session.time
-    ? session.seek(time)
-    : session.advanceTo(time);
-  return changed ? frameOf(session) : null;
+  if (time + 1e-9 < session.time) {
+    session.seek(time);
+    return frameOf(session);
+  }
+  return session.advanceTo(time) ? frameOf(session) : null;
 }
 
 export function GardenScoreBloomBridge({
