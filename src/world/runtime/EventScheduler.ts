@@ -6,12 +6,14 @@ const assertTargetTime = (time: number): void => {
   }
 };
 
+const cloneEvent = (event: WorldEvent): WorldEvent => structuredClone(event);
+
 export class EventScheduler {
   private readonly events: readonly WorldEvent[];
   private index = 0;
 
   constructor(input: readonly WorldEvent[]) {
-    const events = input.map((event) => ({ ...event } as WorldEvent));
+    const events = input.map(cloneEvent);
     const ids = new Set<string>();
     let previousTime = -Infinity;
 
@@ -52,7 +54,7 @@ export class EventScheduler {
       const event = this.events[this.index];
       if (event.time > time) break;
       this.index += 1;
-      emit(event);
+      emit(cloneEvent(event));
       emitted += 1;
     }
 
