@@ -24,3 +24,4 @@ jobs:
         run: npm run build
       - name: Diff check
         run: git diff --check
+# verification rerun for MOBILE STUDIO UX v0.2
