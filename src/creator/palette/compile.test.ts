@@ -105,4 +105,18 @@ describe("compileCreatorPalette", () => {
     expect(creatorPlacementPresets.middle.zone).toBe("middle");
     expect(creatorMotionPresets["gentle-sway"].idleMotion).toBe("sway");
   });
+
+  it("returns validation errors instead of throwing for malformed persisted presets", () => {
+    const draft = completeDraft();
+    (draft.roles.rhythm as unknown as { placementPreset: string }).placementPreset = "underground";
+    (draft.roles.rhythm as unknown as { motionPreset: string }).motionPreset = "explode";
+
+    const result = compileCreatorPalette(draft);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.map(item => item.code)).toEqual(expect.arrayContaining([
+      "unknown-placement-preset",
+      "unknown-motion-preset",
+    ]));
+  });
 });
