@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { ScoreBloomLayer } from "../garden/ScoreBloomLayer";
 import type { Clearing, GardenLayout } from "../garden/clearing";
@@ -7,6 +7,13 @@ import type { PaletteDefinition, PaletteRole } from "../palettes";
 import { coreMeaningFixtures } from "../qa/coreMeaningFixtures";
 import { ScoreBloomSession } from "../world/runtime";
 import type { WorldSnapshot } from "../world/runtime";
+import {
+  creatorPaletteRepository,
+  CreatorPaletteStorageError,
+  materializeCreatorPalette,
+  type CreatorPaletteAssetBlobs,
+  type CreatorPaletteSummary,
+} from "./persistence";
 import {
   compileCreatorPalette,
   createEmptyCreatorPaletteDraft,
@@ -65,6 +72,11 @@ const initialLayout: GardenLayout = {
   artworkHeight: 96,
 };
 
+const createCreatorDraftId = (): string => {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  return uuid ? `local-${uuid}` : `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
 const extensionFormat = (fileName: string): CreatorAssetFormat | null => {
   const value = fileName.trim().toLowerCase();
   if (value.endsWith(".png")) return "png";
@@ -81,18 +93,23 @@ const decodeImageDimensions = (src: string): Promise<{ width: number; height: nu
     image.src = src;
   });
 
-const sampleAsset = (role: PaletteRole): CreatorAssetDraft => {
+const sampleAsset = (role: PaletteRole, byteSize: number): CreatorAssetDraft => {
   const source = prismProofPalette.roles[role].assets[0];
   return {
     role,
     fileName: source.src.split("/").at(-1) ?? `${role}.svg`,
     mimeType: "image/svg+xml",
     format: "svg",
-    byteSize: 1,
+    byteSize,
     objectUrl: source.src,
     anchor: source.anchor ? { ...source.anchor } : { x: 0.5, y: 0.5 },
     baseScale: source.baseScale ?? 1,
   };
+};
+
+const storageMessage = (error: unknown): string => {
+  if (error instanceof CreatorPaletteStorageError) return error.message;
+  return error instanceof Error && error.message ? error.message : "Creator Palette storage failed";
 };
 
 function LabStage({
@@ -151,8 +168,9 @@ function LabStage({
 }
 
 export function CreatorPaletteLab() {
+  const repository = useMemo(() => creatorPaletteRepository(), []);
   const [draft, setDraft] = useState<CreatorPaletteDraft>(() =>
-    createEmptyCreatorPaletteDraft("lab", "My Palette"),
+    createEmptyCreatorPaletteDraft(createCreatorDraftId(), "My Palette"),
   );
   const [fixtureIndex, setFixtureIndex] = useState(2);
   const [reducedMotion, setReducedMotion] = useState(false);
@@ -161,9 +179,35 @@ export function CreatorPaletteLab() {
   const [playing, setPlaying] = useState(false);
   const [importErrors, setImportErrors] = useState<Partial<Record<PaletteRole, string>>>({});
   const ownedUrls = useRef(new Map<PaletteRole, string>());
+  const assetBlobs = useRef<CreatorPaletteAssetBlobs>({});
   const [lastValidPalette, setLastValidPalette] = useState<PaletteDefinition | null>(null);
+  const [savedPalettes, setSavedPalettes] = useState<CreatorPaletteSummary[]>([]);
+  const [selectedSavedId, setSelectedSavedId] = useState("");
+  const [storageBusy, setStorageBusy] = useState(false);
+  const [storageError, setStorageError] = useState("");
+  const [storageStatus, setStorageStatus] = useState("");
   const fixture = coreMeaningFixtures[fixtureIndex];
   const compiled = useMemo(() => compileCreatorPalette(draft), [draft]);
+
+  const refreshSaved = useCallback(async (preferredId?: string) => {
+    try {
+      const next = await repository.list();
+      setSavedPalettes(next);
+      setStorageError("");
+      setSelectedSavedId(previous => {
+        const target = preferredId ?? previous;
+        return target && next.some(item => item.id === target) ? target : (next[0]?.id ?? "");
+      });
+      return next;
+    } catch (error) {
+      setSavedPalettes([]);
+      setSelectedSavedId("");
+      setStorageError(storageMessage(error));
+      return [];
+    }
+  }, [repository]);
+
+  useEffect(() => { void refreshSaved(); }, [refreshSaved]);
 
   useEffect(() => {
     if (compiled.ok) setLastValidPalette(compiled.palette);
@@ -241,6 +285,10 @@ export function CreatorPaletteLab() {
     ownedUrls.current.delete(role);
   };
 
+  const releaseAllOwnedUrls = () => {
+    for (const role of CREATOR_PALETTE_ROLES) releaseOwnedUrl(role);
+  };
+
   const importFile = async (role: PaletteRole, file: File | undefined) => {
     if (!file) return;
     const format = extensionFormat(file.name);
@@ -254,6 +302,7 @@ export function CreatorPaletteLab() {
       const dimensions = await decodeImageDimensions(objectUrl);
       releaseOwnedUrl(role);
       ownedUrls.current.set(role, objectUrl);
+      assetBlobs.current[role] = file;
       updateRole(role, {
         asset: {
           role,
@@ -269,6 +318,7 @@ export function CreatorPaletteLab() {
         },
       });
       setImportErrors(previous => ({ ...previous, [role]: undefined }));
+      setStorageStatus("");
     } catch {
       URL.revokeObjectURL(objectUrl);
       setImportErrors(previous => ({ ...previous, [role]: "Could not read this image" }));
@@ -277,31 +327,156 @@ export function CreatorPaletteLab() {
 
   const removeAsset = (role: PaletteRole) => {
     releaseOwnedUrl(role);
+    delete assetBlobs.current[role];
     updateRole(role, { asset: null });
     setImportErrors(previous => ({ ...previous, [role]: undefined }));
+    setStorageStatus("");
   };
 
-  const useSamples = () => {
-    for (const role of CREATOR_PALETTE_ROLES) releaseOwnedUrl(role);
-    setDraft(previous => ({
-      ...previous,
-      name: previous.name.trim() || "My Palette",
-      roles: Object.fromEntries(CREATOR_PALETTE_ROLES.map(role => [
-        role,
-        { ...previous.roles[role], asset: sampleAsset(role) },
-      ])) as CreatorPaletteDraft["roles"],
-    }));
-    setImportErrors({});
-    setPreviewMode("creator");
+  const useSamples = async () => {
+    setStorageBusy(true);
+    setStorageError("");
+    try {
+      releaseAllOwnedUrls();
+      const entries = await Promise.all(CREATOR_PALETTE_ROLES.map(async role => {
+        const source = prismProofPalette.roles[role].assets[0];
+        const response = await fetch(source.src);
+        if (!response.ok) throw new Error(`Could not load sample ${role}`);
+        const blob = await response.blob();
+        return [role, blob] as const;
+      }));
+      assetBlobs.current = Object.fromEntries(entries) as Record<PaletteRole, Blob>;
+      setDraft(previous => ({
+        ...previous,
+        name: previous.name.trim() || "My Palette",
+        roles: Object.fromEntries(entries.map(([role, blob]) => [
+          role,
+          { ...previous.roles[role], asset: sampleAsset(role, blob.size) },
+        ])) as CreatorPaletteDraft["roles"],
+      }));
+      setImportErrors({});
+      setPreviewMode("creator");
+      setStorageStatus("Sample materials loaded. You can save this palette locally.");
+    } catch (error) {
+      assetBlobs.current = {};
+      setStorageError(storageMessage(error));
+    } finally {
+      setStorageBusy(false);
+    }
   };
 
   const clearAll = () => {
-    for (const role of CREATOR_PALETTE_ROLES) releaseOwnedUrl(role);
-    setDraft(previous => createEmptyCreatorPaletteDraft(previous.id, previous.name));
+    releaseAllOwnedUrls();
+    assetBlobs.current = {};
+    setDraft(createEmptyCreatorPaletteDraft(createCreatorDraftId(), "My Palette"));
+    setSelectedSavedId("");
     setLastValidPalette(null);
     setImportErrors({});
     setPlaying(false);
     setTime(0);
+    setStorageError("");
+    setStorageStatus("");
+  };
+
+  const loadSaved = async (id: string) => {
+    if (!id) return;
+    setStorageBusy(true);
+    setStorageError("");
+    try {
+      const document = await repository.load(id);
+      if (!document) throw new CreatorPaletteStorageError("not-found", "That Creator Palette is no longer saved");
+      const materialized = materializeCreatorPalette(document);
+      releaseAllOwnedUrls();
+      for (const role of CREATOR_PALETTE_ROLES) ownedUrls.current.set(role, materialized.objectUrls[role]);
+      assetBlobs.current = { ...materialized.blobs };
+      setDraft(materialized.draft);
+      setSelectedSavedId(id);
+      setPreviewMode("creator");
+      setPlaying(false);
+      setTime(0);
+      setImportErrors({});
+      setStorageStatus(`Loaded “${materialized.draft.name}”.`);
+    } catch (error) {
+      setStorageError(storageMessage(error));
+    } finally {
+      setStorageBusy(false);
+    }
+  };
+
+  const saveCurrent = async () => {
+    if (!compiled.ok) return;
+    setStorageBusy(true);
+    setStorageError("");
+    try {
+      const summary = await repository.save(draft, assetBlobs.current);
+      await refreshSaved(summary.id);
+      setSelectedSavedId(summary.id);
+      setStorageStatus(`Saved “${summary.name}” on this device.`);
+    } catch (error) {
+      setStorageError(storageMessage(error));
+    } finally {
+      setStorageBusy(false);
+    }
+  };
+
+  const renameSaved = async () => {
+    if (!selectedSavedId || selectedSavedId !== draft.id) return;
+    setStorageBusy(true);
+    setStorageError("");
+    try {
+      const summary = await repository.rename(selectedSavedId, draft.name);
+      await refreshSaved(summary.id);
+      setStorageStatus(`Renamed to “${summary.name}”.`);
+    } catch (error) {
+      setStorageError(storageMessage(error));
+    } finally {
+      setStorageBusy(false);
+    }
+  };
+
+  const duplicateSaved = async () => {
+    if (!selectedSavedId) return;
+    setStorageBusy(true);
+    setStorageError("");
+    try {
+      const source = savedPalettes.find(item => item.id === selectedSavedId);
+      const newId = createCreatorDraftId();
+      const summary = await repository.duplicate(
+        selectedSavedId,
+        newId,
+        `${source?.name ?? "My Palette"} copy`,
+      );
+      await refreshSaved(summary.id);
+      await loadSaved(summary.id);
+      setStorageStatus(`Duplicated as “${summary.name}”.`);
+    } catch (error) {
+      setStorageError(storageMessage(error));
+      setStorageBusy(false);
+    }
+  };
+
+  const deleteSaved = async () => {
+    if (!selectedSavedId) return;
+    const deletingId = selectedSavedId;
+    setStorageBusy(true);
+    setStorageError("");
+    try {
+      await repository.delete(deletingId);
+      const next = await refreshSaved();
+      if (draft.id === deletingId) {
+        releaseAllOwnedUrls();
+        assetBlobs.current = {};
+        setDraft(createEmptyCreatorPaletteDraft(createCreatorDraftId(), "My Palette"));
+        setLastValidPalette(null);
+        setTime(0);
+      }
+      setStorageStatus("Deleted from this device.");
+      setSelectedSavedId(next[0]?.id ?? "");
+    } catch (error) {
+      setStorageError(storageMessage(error));
+    } finally {
+      setStorageBusy(false);
+    }
   };
 
   const seekTo = (next: number) => {
@@ -330,12 +505,15 @@ export function CreatorPaletteLab() {
   };
 
   const validationErrors = compiled.ok ? [] : compiled.errors;
+  const selectedSaved = savedPalettes.find(item => item.id === selectedSavedId);
 
   return <main
     className="creator-lab"
     data-creator-lab-valid={compiled.ok ? "true" : "false"}
     data-creator-lab-preview={previewPalette?.id ?? "empty"}
     data-creator-lab-fixture={fixture.id}
+    data-creator-current-id={draft.id}
+    data-creator-saved-count={savedPalettes.length}
   >
     <header className="creator-lab-header">
       <div>
@@ -401,6 +579,37 @@ export function CreatorPaletteLab() {
     </section>
 
     <section className="creator-lab-editor" aria-label="Palette materials">
+      <div className="creator-lab-library" aria-label="Saved Creator Palettes">
+        <label>
+          Saved palettes
+          <select
+            aria-label="Saved Creator Palettes"
+            value={selectedSavedId}
+            onChange={event => setSelectedSavedId(event.currentTarget.value)}
+            disabled={storageBusy || !savedPalettes.length}
+          >
+            {!savedPalettes.length && <option value="">None saved yet</option>}
+            {savedPalettes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>
+        <div className="creator-lab-library-actions">
+          <button type="button" onClick={() => void loadSaved(selectedSavedId)} disabled={storageBusy || !selectedSavedId}>Open</button>
+          <button type="button" onClick={clearAll} disabled={storageBusy}>New</button>
+          <button type="button" onClick={() => void saveCurrent()} disabled={storageBusy || !compiled.ok}>Save</button>
+          <button type="button" onClick={() => void renameSaved()} disabled={storageBusy || !selectedSavedId || selectedSavedId !== draft.id}>Rename</button>
+          <button type="button" onClick={() => void duplicateSaved()} disabled={storageBusy || !selectedSavedId}>Duplicate</button>
+          <button type="button" onClick={() => void deleteSaved()} disabled={storageBusy || !selectedSavedId}>Delete</button>
+        </div>
+        <span className="creator-lab-library-note">
+          {selectedSaved ? `${Math.ceil(selectedSaved.totalBytes / 1024)} KB on this device` : "12 palettes / 40 MB library limit"}
+        </span>
+      </div>
+
+      {(storageError || storageStatus) && <div
+        className={storageError ? "creator-lab-storage-message is-error" : "creator-lab-storage-message"}
+        role="status"
+      >{storageError || storageStatus}</div>}
+
       <div className="creator-lab-name-row">
         <label>
           Palette name
@@ -419,8 +628,8 @@ export function CreatorPaletteLab() {
           />
         </label>
         <div className="creator-lab-actions">
-          <button type="button" onClick={useSamples}>Use sample assets</button>
-          <button type="button" onClick={clearAll}>Clear</button>
+          <button type="button" onClick={() => { void useSamples(); }} disabled={storageBusy}>Use sample assets</button>
+          <button type="button" onClick={clearAll} disabled={storageBusy}>Clear</button>
         </div>
       </div>
 
