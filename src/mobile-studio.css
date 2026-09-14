@@ -1,0 +1,434 @@
+/* MOBILE STUDIO UX
+ * The desktop experience stays unchanged. On small touch screens DRAW becomes
+ * a one-screen instrument: canvas first, fixed performance dock, optional
+ * music settings sheet. This removes the scroll-vs-draw gesture conflict.
+ */
+
+.mobile-music-trigger,
+.mobile-studio-backdrop {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --mobile-studio-topbar: 54px;
+    --mobile-studio-nav: 44px;
+    --mobile-studio-dock: 76px;
+    --mobile-studio-safe: env(safe-area-inset-bottom, 0px);
+    --mobile-studio-sound-sheet: 170px;
+  }
+
+  body:has(main:not([hidden])) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body:has(main:not([hidden])) .app-shell {
+    height: 100dvh;
+    min-height: 0;
+    padding: 0 12px;
+    overflow: hidden;
+  }
+
+  body:has(main:not([hidden])) .topbar {
+    height: var(--mobile-studio-topbar);
+    min-height: var(--mobile-studio-topbar);
+    gap: 8px;
+  }
+
+  body:has(main:not([hidden])) .brand {
+    gap: 0;
+  }
+
+  body:has(main:not([hidden])) .brand > span {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .logo-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  body:has(main:not([hidden])) .header-actions {
+    gap: 2px;
+  }
+
+  body:has(main:not([hidden])) .header-divider,
+  body:has(main:not([hidden])) .undo-button span,
+  body:has(main:not([hidden])) .save-button span {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .undo-button,
+  body:has(main:not([hidden])) .save-button {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  body:has(main:not([hidden])) .save-button {
+    border-color: transparent;
+  }
+
+  body:has(main:not([hidden])) .workspace-toolbar {
+    height: var(--mobile-studio-nav);
+    min-height: var(--mobile-studio-nav);
+    margin: 0;
+    padding: 2px 0;
+    align-items: center;
+  }
+
+  body:has(main:not([hidden])) .workspace-toolbar .space-nav button {
+    min-height: 38px;
+    padding-inline: 13px;
+  }
+
+  body:has(main:not([hidden])) .language-switch select {
+    min-height: 38px;
+  }
+
+  body:has(main:not([hidden])) main {
+    height: calc(
+      100dvh - var(--mobile-studio-topbar) - var(--mobile-studio-nav) -
+        var(--mobile-studio-dock) - var(--mobile-studio-safe)
+    );
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body:has(main:not([hidden])) .intro,
+  body:has(main:not([hidden])) .creation-trail,
+  body:has(main:not([hidden])) .site-footer,
+  body:has(main:not([hidden])) .timeline {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .score-paper {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 42px minmax(0, 1fr) 40px;
+    border-radius: 12px;
+  }
+
+  body:has(main:not([hidden])) .paper-heading {
+    height: 42px;
+    min-height: 42px;
+    padding: 0 12px;
+  }
+
+  body:has(main:not([hidden])) .paper-label {
+    min-width: 0;
+    font-size: 6.5px;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  body:has(main:not([hidden])) .paper-label > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body:has(main:not([hidden])) .gesture-badge {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .paper-meta {
+    gap: 8px;
+    font-size: 8px;
+    flex-shrink: 0;
+  }
+
+  body:has(main:not([hidden])) .paper-meta > span:first-child {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .drawing-area {
+    height: auto;
+    min-height: 0;
+    margin: 0 15px 0 24px;
+  }
+
+  body:has(main:not([hidden])) .pitch-hint {
+    left: -16px;
+  }
+
+  body:has(main:not([hidden])) .score-canvas {
+    touch-action: none;
+  }
+
+  body:has(main:not([hidden])) .paper-footer {
+    height: 40px;
+    min-height: 40px;
+    margin: 0 11px;
+    padding: 6px 0;
+    border-top: 1px solid #eeede7;
+  }
+
+  body:has(main:not([hidden])) .paper-footer .inspiration,
+  body:has(main:not([hidden])) .paper-footer .gesture-hint {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .canvas-caption {
+    width: 100%;
+    text-align: center;
+    font-size: 9px;
+  }
+
+  /* Existing controls become the performance dock. */
+  body:has(main:not([hidden])) .controls {
+    position: fixed;
+    z-index: 50;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    height: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe));
+    margin: 0;
+    padding: 8px 82px calc(8px + var(--mobile-studio-safe)) 10px;
+    display: grid;
+    grid-template-columns: 102px minmax(122px, 1fr);
+    align-items: center;
+    gap: 9px;
+    background: color-mix(in srgb, #fffefa 96%, transparent);
+    border-top: 1px solid #deddd4;
+    box-shadow: 0 -9px 30px #30322d12;
+    backdrop-filter: blur(12px);
+  }
+
+  body:has(main:not([hidden])) .tool-control,
+  body:has(main:not([hidden])) .play-control {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body:has(main:not([hidden])) .tool-switch {
+    width: 96px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  body:has(main:not([hidden])) .tool-switch button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    gap: 0;
+  }
+
+  body:has(main:not([hidden])) .tool-switch button span,
+  body:has(main:not([hidden])) .control-hint,
+  body:has(main:not([hidden])) .place-garden {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .play-button {
+    width: min(100%, 150px);
+    min-width: 118px;
+    height: 50px;
+    min-height: 50px;
+    border-radius: 12px;
+  }
+
+  /* The detailed music controls are dormant until the MUSIC trigger opens them. */
+  body:has(main:not([hidden])) .controls .magnet-control,
+  body:has(main:not([hidden])) .sound-strip {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .mobile-music-trigger {
+    display: flex;
+    position: fixed;
+    z-index: 52;
+    right: 10px;
+    bottom: calc(8px + var(--mobile-studio-safe));
+    width: 62px;
+    height: 50px;
+    min-width: 62px;
+    min-height: 50px;
+    border: 1px solid #dfe0d7;
+    border-radius: 12px;
+    background: #f4f4ed;
+    color: #68725f;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 2px 0 #d9dbd1;
+    font-size: 8px;
+    font-weight: 650;
+    letter-spacing: 0.7px;
+  }
+
+  body:has(main:not([hidden])) .mobile-music-trigger.open {
+    background: #e7ebdf;
+    color: #4d5d43;
+  }
+
+  body:has(main:not([hidden])) .mobile-studio-backdrop {
+    display: block;
+    position: fixed;
+    z-index: 40;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: #30352d42;
+    backdrop-filter: blur(2px);
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .controls .magnet-control {
+    display: block;
+    position: fixed;
+    z-index: 45;
+    left: 12px;
+    right: 12px;
+    bottom: calc(
+      var(--mobile-studio-dock) + var(--mobile-studio-safe) +
+        var(--mobile-studio-sound-sheet)
+    );
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    padding: 18px 18px 14px;
+    background: var(--paper);
+    border: 1px solid #dfded5;
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -15px 45px #30322d20;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .sound-strip {
+    display: flex;
+    position: fixed;
+    z-index: 45;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe));
+    width: auto;
+    height: var(--mobile-studio-sound-sheet);
+    margin: 0;
+    padding: 14px 18px 16px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 12px;
+    background: var(--paper);
+    border: 1px solid #dfded5;
+    border-top: 1px solid #eceae3;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 18px 45px #30322d20;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-control {
+    display: block;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .sound-label {
+    display: none;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-options button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 3px;
+    font-size: 9px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .secondary-sound {
+    min-height: 48px;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .support-toggle,
+  body.mobile-music-open:has(main:not([hidden])) .tempo-control select {
+    min-height: 44px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-count,
+  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint {
+    margin-top: 6px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .magnet-title {
+    margin-bottom: 5px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .slider-labels {
+    margin-top: 1px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .slider-row input {
+    height: 44px;
+  }
+
+  /* Keep floating notices above both the dock and the settings sheet. */
+  body:has(main:not([hidden])) .toast {
+    bottom: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe) + 10px);
+    z-index: 60;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .toast {
+    bottom: calc(
+      var(--mobile-studio-dock) + var(--mobile-studio-safe) +
+        var(--mobile-studio-sound-sheet) + 205px
+    );
+  }
+}
+
+@media (max-width: 380px) {
+  body:has(main:not([hidden])) .controls {
+    grid-template-columns: 96px minmax(112px, 1fr);
+    padding-left: 7px;
+    padding-right: 77px;
+    gap: 6px;
+  }
+
+  body:has(main:not([hidden])) .tool-switch {
+    width: 92px;
+  }
+
+  body:has(main:not([hidden])) .tool-switch button {
+    width: 42px;
+    min-width: 42px;
+  }
+
+  body:has(main:not([hidden])) .mobile-music-trigger {
+    right: 7px;
+    width: 58px;
+    min-width: 58px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-options button {
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-music-trigger,
+  .mobile-studio-backdrop {
+    transition: none !important;
+    animation: none !important;
+  }
+}
