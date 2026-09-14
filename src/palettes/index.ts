@@ -1,5 +1,6 @@
 export { clearingPalette, createOfficialPaletteRegistry } from "./clearing";
 export { fixtureCrystalPalette, fixtureGardenPalette } from "./fixtures";
+export { prismProofPalette } from "./prism";
 export { PaletteRegistry } from "./registry";
 export { createPaletteRuntime, resolveMotionProfile } from "./runtime";
 export { PALETTE_ROLES, validatePaletteDefinition } from "./schema";
