@@ -64,8 +64,8 @@ app = replaceOnce(
 app = replaceOnce(
   app,
   '          <div ref={areaRef} className={`drawing-area tool-${tool}`}>\n            <div className="pitch-hint high">{t("HIGH")}</div>',
-  '          <div ref={areaRef} className={`drawing-area tool-${tool}`}>\n            {import.meta.env.DEV && (\n              <div className="ink-lab-switch" role="group" aria-label="INK LAB renderer">\n                <span>INK LAB</span>\n                {(["current", "streamlined", "freehand"] as const).map((mode) => (\n                  <button\n                    key={mode}\n                    type="button"\n                    aria-pressed={inkMode === mode}\n                    onClick={() => setInkMode(mode)}\n                  >\n                    {{ current: "RAW", streamlined: "SMOOTH", freehand: "INK" }[mode]}\n                  </button>\n                ))}\n              </div>\n            )}\n            <div className="pitch-hint high">{t("HIGH")}</div>',
-  "dev A/B selector",
+  '          <div ref={areaRef} className={`drawing-area tool-${tool}`}>\n            {new URLSearchParams(window.location.search).has("inklab") && (\n              <div className="ink-lab-switch" role="group" aria-label="INK LAB renderer">\n                <span>INK LAB</span>\n                {(["current", "streamlined", "freehand"] as const).map((mode) => (\n                  <button\n                    key={mode}\n                    type="button"\n                    aria-pressed={inkMode === mode}\n                    onClick={() => setInkMode(mode)}\n                  >\n                    {{ current: "RAW", streamlined: "SMOOTH", freehand: "INK" }[mode]}\n                  </button>\n                ))}\n              </div>\n            )}\n            <div className="pitch-hint high">{t("HIGH")}</div>',
+  "query-gated A/B selector",
 );
 
 app = replaceOnce(
