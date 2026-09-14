@@ -1,0 +1,193 @@
+:root {
+  font-family: "Noto Sans JP", system-ui, sans-serif;
+  color: #17352f;
+  background: #eaf6f0;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #eaf6f0; }
+button, input, select { font: inherit; }
+button, select, input[type="text"] { color: inherit; }
+
+.creator-lab {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 28px;
+  display: grid;
+  gap: 22px;
+}
+
+.creator-lab-header,
+.creator-lab-preview,
+.creator-lab-editor {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid #b7d3c9;
+  border-radius: 24px;
+  box-shadow: 0 14px 40px rgba(23, 53, 47, 0.08);
+}
+
+.creator-lab-header {
+  padding: 24px 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.creator-lab-header p {
+  margin: 0 0 6px;
+  font-size: 0.74rem;
+  letter-spacing: 0.16em;
+  color: #5a716a;
+}
+
+.creator-lab-header h1 {
+  margin: 0 0 6px;
+  font-family: "Zen Maru Gothic", system-ui, sans-serif;
+  font-size: clamp(1.7rem, 4vw, 2.55rem);
+  line-height: 1.12;
+}
+
+.creator-lab-header span { color: #5a716a; }
+.creator-lab-reduced { display: flex; gap: 8px; align-items: center; min-height: 44px; white-space: nowrap; }
+
+.creator-lab-preview { padding: 18px; display: grid; gap: 14px; }
+.creator-lab-preview-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.creator-lab-mode { display: flex; padding: 4px; gap: 4px; border-radius: 999px; background: #ddeee7; }
+.creator-lab-mode button,
+.creator-lab-fixtures button,
+.creator-lab-transport button,
+.creator-lab-actions button,
+.creator-lab-role-card header button {
+  border: 0;
+  border-radius: 999px;
+  min-height: 44px;
+  padding: 0 16px;
+  background: #edf5f2;
+  cursor: pointer;
+}
+.creator-lab-mode button.is-active,
+.creator-lab-fixtures button.is-active,
+.creator-lab-transport button:first-child,
+.creator-lab-actions button:first-child {
+  background: #17352f;
+  color: #fff;
+}
+button:disabled { opacity: 0.42; cursor: not-allowed; }
+
+.creator-lab-stage {
+  position: relative;
+  min-height: 420px;
+  overflow: hidden;
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(243, 201, 105, 0.15), transparent 34%),
+    linear-gradient(180deg, #f7fbf8 0%, #e3f2eb 100%);
+}
+.creator-lab-stage .score-bloom-layer,
+.creator-lab-source { position: absolute; inset: 0; width: 100%; height: 100%; }
+.creator-lab-source { z-index: 2; color: #335e54; pointer-events: none; }
+.creator-lab-empty-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #5a716a;
+  text-align: center;
+  z-index: 1;
+}
+
+.creator-lab-fixtures,
+.creator-lab-transport { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.creator-lab-fixtures button { min-width: 44px; padding: 0 14px; }
+.creator-lab-transport input[type="range"] { flex: 1 1 220px; min-width: 120px; }
+.creator-lab-transport output { min-width: 92px; text-align: right; font-variant-numeric: tabular-nums; color: #5a716a; }
+
+.creator-lab-editor { padding: 22px; display: grid; gap: 18px; }
+.creator-lab-name-row { display: grid; grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto; gap: 12px; align-items: end; }
+.creator-lab-name-row label,
+.creator-lab-presets label { display: grid; gap: 6px; font-weight: 700; font-size: 0.82rem; }
+.creator-lab-name-row input,
+.creator-lab-presets select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #b7d3c9;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0 12px;
+}
+.creator-lab-name-row small { font-weight: 400; color: #5a716a; }
+.creator-lab-actions { display: flex; gap: 8px; }
+
+.creator-lab-role-list { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.creator-lab-role-card {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid #c9ded6;
+  border-radius: 18px;
+  background: #f9fcfa;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.creator-lab-role-card > header { display: flex; justify-content: space-between; gap: 8px; min-height: 52px; }
+.creator-lab-role-card > header div { min-width: 0; display: grid; gap: 2px; }
+.creator-lab-role-card > header strong { font-size: 1rem; }
+.creator-lab-role-card > header small { color: #5a716a; line-height: 1.25; }
+.creator-lab-role-card > header button { min-height: 32px; height: 32px; padding: 0 10px; font-size: 0.74rem; }
+
+.creator-lab-file {
+  min-height: 92px;
+  border: 1px dashed #8fb9ac;
+  border-radius: 14px;
+  background: #eef7f3;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+  cursor: pointer;
+  text-align: center;
+  overflow: hidden;
+}
+.creator-lab-file span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.creator-lab-file input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; pointer-events: none; }
+.creator-lab-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.creator-lab-errors { display: grid; gap: 3px; color: #8b3f40; font-size: 0.76rem; line-height: 1.25; }
+
+.creator-lab-status {
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #f6e8df;
+  color: #724b3f;
+}
+.creator-lab-status.is-ready { background: #e3f2eb; color: #245746; }
+
+@media (max-width: 900px) {
+  .creator-lab { padding: 16px; }
+  .creator-lab-role-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .creator-lab-name-row { grid-template-columns: 1fr 1fr; }
+  .creator-lab-actions { grid-column: 1 / -1; }
+}
+
+@media (max-width: 560px) {
+  .creator-lab { padding: 10px; gap: 12px; }
+  .creator-lab-header,
+  .creator-lab-preview,
+  .creator-lab-editor { border-radius: 18px; }
+  .creator-lab-header { padding: 18px; display: grid; }
+  .creator-lab-reduced { justify-self: start; }
+  .creator-lab-preview { padding: 12px; }
+  .creator-lab-preview-bar { align-items: flex-start; flex-direction: column; }
+  .creator-lab-stage { min-height: 330px; }
+  .creator-lab-mode { width: 100%; }
+  .creator-lab-mode button { flex: 1; }
+  .creator-lab-transport button { flex: 1 1 90px; }
+  .creator-lab-transport output { width: 100%; text-align: left; }
+  .creator-lab-editor { padding: 12px; }
+  .creator-lab-name-row,
+  .creator-lab-role-list { grid-template-columns: 1fr; }
+  .creator-lab-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .creator-lab-actions button { padding-inline: 10px; }
+  .creator-lab-role-card { padding: 14px; }
+  .creator-lab-file { min-height: 64px; }
+}
