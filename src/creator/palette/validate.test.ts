@@ -89,4 +89,17 @@ describe("validateCreatorPaletteDraft", () => {
       expect.arrayContaining(["name-required", "asset-role-mismatch"]),
     );
   });
+
+  it("turns unknown saved-draft versions and presets into validation errors", () => {
+    const draft = completeDraft();
+    (draft as unknown as { version: string }).version = "picture-score:creator-palette-draft:v0";
+    (draft.roles.melody as unknown as { placementPreset: string }).placementPreset = "ceiling";
+    (draft.roles.harmony as unknown as { motionPreset: string }).motionPreset = "spin";
+
+    expect(codes(draft)).toEqual(expect.arrayContaining([
+      "unsupported-version",
+      "unknown-placement-preset",
+      "unknown-motion-preset",
+    ]));
+  });
 });
