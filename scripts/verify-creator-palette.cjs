@@ -129,5 +129,11 @@ async (page) => {
   assert(perf.clearingMs<500 && perf.prismMs<500,'palette replay performance regression: '+JSON.stringify(perf));
 
   assert(!errors.length && !failedAssets.length,JSON.stringify({errors,failedAssets}));
+
+  // This QA page is isolated from the product shell. Restore the shared browser
+  // session so the existing CLEARING / WEAVE / ALIVE regression scripts that
+  // follow can seed and exercise the production app normally.
+  await page.goto('http://127.0.0.1:5173/');
+
   return {shiftedRoles,performance:perf,reducedMotion:true,errors,failedAssets};
 }
