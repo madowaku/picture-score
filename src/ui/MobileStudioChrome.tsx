@@ -47,7 +47,6 @@ export function MobileStudioChrome() {
         className={`mobile-music-trigger ${open ? "open" : ""}`}
         aria-label={open ? "音楽設定を閉じる" : "音楽設定を開く"}
         aria-expanded={open}
-        aria-controls="mobile-music-sheet"
         onClick={() => setOpen((value) => !value)}
       >
         {open ? <X size={18} /> : <SlidersHorizontal size={18} />}
