@@ -83,6 +83,9 @@ jobs:
       - name: Verify Creator Palette
         run: playwright-cli -s=release run-code --filename scripts/verify-creator-palette.cjs
 
+      - name: Verify Creator Palette Lab
+        run: playwright-cli -s=release run-code --filename scripts/verify-creator-palette-lab.cjs
+
       - name: Regress CLEARING
         run: playwright-cli -s=release run-code --filename scripts/verify-clearing.cjs
 
