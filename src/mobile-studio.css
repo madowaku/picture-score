@@ -1,0 +1,596 @@
+/* MOBILE STUDIO UX v0.2
+ * The desktop experience stays unchanged. On small touch screens DRAW becomes
+ * a one-screen instrument: canvas first, fixed performance dock, optional
+ * music settings sheet. This removes the scroll-vs-draw gesture conflict while
+ * preserving Picture Score identity, editable artwork titles, and the path to Garden.
+ */
+
+.mobile-music-trigger,
+.mobile-studio-backdrop {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  :root {
+    --mobile-studio-topbar: 58px;
+    --mobile-studio-nav: 44px;
+    --mobile-studio-dock: 76px;
+    --mobile-studio-safe: env(safe-area-inset-bottom, 0px);
+    --mobile-studio-sound-sheet: 170px;
+  }
+
+  body:has(main:not([hidden])) {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  body:has(main:not([hidden])) .app-shell {
+    height: 100dvh;
+    min-height: 0;
+    padding: 0 12px;
+    overflow: hidden;
+  }
+
+  body:has(main:not([hidden])) .topbar {
+    height: var(--mobile-studio-topbar);
+    min-height: var(--mobile-studio-topbar);
+    gap: 7px;
+  }
+
+  /* Keep enough identity in the studio that it still feels like Picture Score. */
+  body:has(main:not([hidden])) .brand {
+    gap: 5px;
+    min-width: 92px;
+    flex-shrink: 0;
+    font-size: 10.5px;
+    line-height: 1.05;
+    letter-spacing: 0.45px;
+    text-transform: uppercase;
+  }
+
+  body:has(main:not([hidden])) .brand > span {
+    display: inline;
+  }
+
+  body:has(main:not([hidden])) .logo-mark {
+    width: 29px;
+    height: 29px;
+  }
+
+  /* Artwork title stays editable in the one-screen studio. */
+  body:has(main:not([hidden])) .project-name {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0 1px;
+    gap: 3px;
+    color: #7b7e72;
+  }
+
+  body:has(main:not([hidden])) .project-name input {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 2px 5px;
+    border: 0;
+    border-bottom: 1px dashed #d4d2c8;
+    border-radius: 0;
+    background: transparent;
+    color: #676b60;
+    font-size: 10.5px;
+    text-align: center;
+    cursor: text;
+  }
+
+  body:has(main:not([hidden])) .project-name input:focus {
+    border-bottom-style: solid;
+    border-bottom-color: #94a185;
+    background: #fffdf780;
+  }
+
+  body:has(main:not([hidden])) .project-name::after {
+    content: "✎";
+    flex: 0 0 auto;
+    align-self: center;
+    margin-left: 1px;
+    color: #979b8f;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  body:has(main:not([hidden])) .saved-indicator {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .header-actions {
+    gap: 1px;
+    flex-shrink: 0;
+  }
+
+  body:has(main:not([hidden])) .header-divider,
+  body:has(main:not([hidden])) .undo-button span,
+  body:has(main:not([hidden])) .save-button span {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .undo-button,
+  body:has(main:not([hidden])) .save-button {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    padding: 0;
+    justify-content: center;
+  }
+
+  body:has(main:not([hidden])) .save-button {
+    border-color: transparent;
+  }
+
+  body:has(main:not([hidden])) .workspace-toolbar {
+    height: var(--mobile-studio-nav);
+    min-height: var(--mobile-studio-nav);
+    margin: 0;
+    padding: 2px 0;
+    align-items: center;
+  }
+
+  body:has(main:not([hidden])) .workspace-toolbar .space-nav button {
+    min-height: 38px;
+    padding-inline: 13px;
+  }
+
+  body:has(main:not([hidden])) .language-switch select {
+    min-height: 38px;
+  }
+
+  body:has(main:not([hidden])) main {
+    height: calc(
+      100dvh - var(--mobile-studio-topbar) - var(--mobile-studio-nav) -
+        var(--mobile-studio-dock) - var(--mobile-studio-safe)
+    );
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  body:has(main:not([hidden])) .intro,
+  body:has(main:not([hidden])) .creation-trail,
+  body:has(main:not([hidden])) .site-footer,
+  body:has(main:not([hidden])) .timeline {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .score-paper {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    display: grid;
+    grid-template-rows: 42px minmax(0, 1fr) 40px;
+    border-radius: 12px;
+  }
+
+  body:has(main:not([hidden])) .paper-heading {
+    height: 42px;
+    min-height: 42px;
+    padding: 0 12px;
+  }
+
+  body:has(main:not([hidden])) .paper-label {
+    min-width: 0;
+    font-size: 6.5px;
+    letter-spacing: 0.8px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  body:has(main:not([hidden])) .paper-label > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  body:has(main:not([hidden])) .gesture-badge {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .paper-meta {
+    gap: 8px;
+    font-size: 8px;
+    flex-shrink: 0;
+  }
+
+  body:has(main:not([hidden])) .paper-meta > span:first-child {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .drawing-area {
+    height: auto;
+    min-height: 0;
+    margin: 0 15px 0 24px;
+  }
+
+  body:has(main:not([hidden])) .pitch-hint {
+    left: -16px;
+  }
+
+  body:has(main:not([hidden])) .score-canvas {
+    touch-action: none;
+  }
+
+  body:has(main:not([hidden])) .paper-footer {
+    height: 40px;
+    min-height: 40px;
+    margin: 0 11px;
+    padding: 6px 0;
+    border-top: 1px solid #eeede7;
+  }
+
+  body:has(main:not([hidden])) .paper-footer .inspiration,
+  body:has(main:not([hidden])) .paper-footer .gesture-hint {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .canvas-caption {
+    width: 100%;
+    padding-left: 7px;
+    text-align: left;
+    font-size: 9px;
+  }
+
+  /* Existing controls become the performance dock. */
+  body:has(main:not([hidden])) .controls {
+    position: fixed;
+    z-index: 50;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    height: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe));
+    margin: 0;
+    padding: 8px 82px calc(8px + var(--mobile-studio-safe)) 10px;
+    display: grid;
+    grid-template-columns: 102px minmax(122px, 1fr);
+    align-items: center;
+    gap: 9px;
+    background: color-mix(in srgb, #fffefa 96%, transparent);
+    border-top: 1px solid #deddd4;
+    box-shadow: 0 -9px 30px #30322d12;
+    backdrop-filter: blur(12px);
+  }
+
+  body:has(main:not([hidden])) .tool-control,
+  body:has(main:not([hidden])) .play-control {
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body:has(main:not([hidden])) .tool-switch {
+    width: 96px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  body:has(main:not([hidden])) .tool-switch button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    gap: 0;
+  }
+
+  body:has(main:not([hidden])) .tool-switch button span,
+  body:has(main:not([hidden])) .control-hint {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .play-button {
+    width: min(100%, 150px);
+    min-width: 118px;
+    height: 50px;
+    min-height: 50px;
+    border-radius: 12px;
+  }
+
+  /* Garden is the next chapter after hearing a drawing, not a hidden setting. */
+  body:has(main:not([hidden])) .place-garden {
+    display: flex;
+    position: fixed;
+    z-index: 51;
+    right: 13px;
+    bottom: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe) + 7px);
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid #d9dfd2;
+    border-radius: 999px;
+    background: #f3f6ed;
+    color: #5e7353;
+    box-shadow: 0 3px 12px #34402d13;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.25px;
+    white-space: nowrap;
+  }
+
+  body:has(main:not([hidden])) .place-garden:disabled {
+    display: none;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .place-garden {
+    display: none;
+  }
+
+  /* The detailed music controls are dormant until the MUSIC trigger opens them. */
+  body:has(main:not([hidden])) .controls .magnet-control,
+  body:has(main:not([hidden])) .sound-strip {
+    display: none;
+  }
+
+  body:has(main:not([hidden])) .mobile-music-trigger {
+    display: flex;
+    position: fixed;
+    z-index: 52;
+    right: 10px;
+    bottom: calc(8px + var(--mobile-studio-safe));
+    width: 62px;
+    height: 50px;
+    min-width: 62px;
+    min-height: 50px;
+    border: 1px solid #dfe0d7;
+    border-radius: 12px;
+    background: #f4f4ed;
+    color: #68725f;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 2px 0 #d9dbd1;
+    font-size: 8px;
+    font-weight: 650;
+    letter-spacing: 0.7px;
+  }
+
+  body:has(main:not([hidden])) .mobile-music-trigger.open {
+    background: #e7ebdf;
+    color: #4d5d43;
+  }
+
+  body:has(main:not([hidden])) .mobile-studio-backdrop {
+    display: block;
+    position: fixed;
+    z-index: 40;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    padding: 0;
+    border: 0;
+    background: #30352d42;
+    backdrop-filter: blur(2px);
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .controls .magnet-control {
+    display: block;
+    position: fixed;
+    z-index: 45;
+    left: 12px;
+    right: 12px;
+    bottom: calc(
+      var(--mobile-studio-dock) + var(--mobile-studio-safe) +
+        var(--mobile-studio-sound-sheet)
+    );
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    margin: 0;
+    padding: 18px 18px 14px;
+    background: var(--paper);
+    border: 1px solid #dfded5;
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -15px 45px #30322d20;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .sound-strip {
+    display: flex;
+    position: fixed;
+    z-index: 45;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe));
+    width: auto;
+    height: var(--mobile-studio-sound-sheet);
+    margin: 0;
+    padding: 14px 18px 16px;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 12px;
+    background: var(--paper);
+    border: 1px solid #dfded5;
+    border-top: 1px solid #eceae3;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 18px 45px #30322d20;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-control {
+    display: block;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .sound-label {
+    display: none;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-options {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-options button {
+    min-width: 0;
+    min-height: 44px;
+    padding: 6px 3px;
+    font-size: 9px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .secondary-sound {
+    min-height: 48px;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .support-toggle,
+  body.mobile-music-open:has(main:not([hidden])) .tempo-control select {
+    min-height: 44px;
+  }
+
+  /* Counts are useful diagnostics, but not useful language for a first-time player. */
+  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-count,
+  body.mobile-music-open:has(main:not([hidden])) .magnet-title > span {
+    display: none;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .magnet-title {
+    margin-bottom: 5px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .slider-labels {
+    margin-top: 0;
+    font-size: 0;
+    letter-spacing: 0;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .slider-labels span::after {
+    font-size: 9px;
+    letter-spacing: 0.15px;
+  }
+
+  html[lang="ja"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:first-child::after {
+    content: "線の形をそのまま";
+  }
+
+  html[lang="ja"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:last-child::after {
+    content: "曲として整える";
+  }
+
+  html[lang="en"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:first-child::after {
+    content: "Keep the drawing";
+  }
+
+  html[lang="en"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:last-child::after {
+    content: "Shape into music";
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .slider-row input {
+    height: 44px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint {
+    margin: 7px 0 0;
+    min-height: 32px;
+    font-size: 0;
+    line-height: 1.65;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint::after {
+    display: block;
+    color: #727969;
+    font-size: 9.5px;
+    line-height: 1.65;
+  }
+
+  html[lang="ja"] body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint::after {
+    content: "左は描いた線の動きを細かく音に。右ほど音を選んで、聴きやすいフレーズに整えます。";
+  }
+
+  html[lang="en"] body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint::after {
+    content: "Left follows the details of your line. Move right to select notes and shape a smoother musical phrase.";
+  }
+
+  /* Keep floating notices above both the dock and the settings sheet. */
+  body:has(main:not([hidden])) .toast {
+    bottom: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe) + 10px);
+    z-index: 60;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .toast {
+    bottom: calc(
+      var(--mobile-studio-dock) + var(--mobile-studio-safe) +
+        var(--mobile-studio-sound-sheet) + 205px
+    );
+  }
+}
+
+@media (max-width: 380px) {
+  body:has(main:not([hidden])) .brand {
+    min-width: 84px;
+    font-size: 9px;
+    gap: 3px;
+  }
+
+  body:has(main:not([hidden])) .logo-mark {
+    width: 27px;
+    height: 27px;
+  }
+
+  body:has(main:not([hidden])) .project-name input {
+    font-size: 10px;
+  }
+
+  body:has(main:not([hidden])) .project-name::after {
+    font-size: 10px;
+  }
+
+  body:has(main:not([hidden])) .undo-button,
+  body:has(main:not([hidden])) .save-button {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
+
+  body:has(main:not([hidden])) .controls {
+    grid-template-columns: 96px minmax(112px, 1fr);
+    padding-left: 7px;
+    padding-right: 77px;
+    gap: 6px;
+  }
+
+  body:has(main:not([hidden])) .tool-switch {
+    width: 92px;
+  }
+
+  body:has(main:not([hidden])) .tool-switch button {
+    width: 42px;
+    min-width: 42px;
+  }
+
+  body:has(main:not([hidden])) .mobile-music-trigger {
+    right: 7px;
+    width: 58px;
+    min-width: 58px;
+  }
+
+  body:has(main:not([hidden])) .place-garden {
+    right: 8px;
+    padding-inline: 11px;
+    font-size: 9px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .instrument-options button {
+    font-size: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-music-trigger,
+  .mobile-studio-backdrop {
+    transition: none !important;
+    animation: none !important;
+  }
+}
