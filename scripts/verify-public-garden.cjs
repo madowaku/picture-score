@@ -19,7 +19,7 @@ async (page) => {
     assert(await page.getByRole('button', {name:'DRAW', exact:true}).count() === 1, 'DRAW nav missing');
     assert(await page.getByRole('button', {name:'GARDEN', exact:true}).count() === 1, 'GARDEN nav missing');
     assert(await page.locator('.creation-trail li').count() === 3, 'first-run creation trail missing');
-    assert(await page.locator('.garden-empty-start').count() === 0, 'Garden should not overlay DRAW on first load');
+    assert(await page.locator('.garden-view:not([hidden])').count() === 0, 'Garden should be hidden on first load');
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `initial horizontal overflow ${viewport.width}`);
   }
 
