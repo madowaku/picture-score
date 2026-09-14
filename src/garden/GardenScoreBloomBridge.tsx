@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { compileCreatorPalette } from "../creator/palette";
+import { creatorPaletteRepository, materializeCreatorPalette } from "../creator/persistence";
 import { clearingPalette } from "../palettes";
 import type { PaletteDefinition } from "../palettes";
 import { ScoreBloomSession } from "../world/runtime";
@@ -9,6 +11,15 @@ import { gardenScoreBloomIdentity, gardenScoreBloomSource } from "./gardenScoreB
 import type { GardenTransport } from "./gardenTransport";
 import { ScoreBloomDebugInspector, selectedDebugEntity } from "./ScoreBloomDebugInspector";
 import { ScoreBloomLayer } from "./ScoreBloomLayer";
+import "./scoreBloomPalette.css";
+
+const SELECTED_PALETTE_KEY = "picture-score:creator-palette:selected:v1";
+
+interface LoadedCreatorPalette {
+  id: string;
+  name: string;
+  palette: PaletteDefinition;
+}
 
 const frameOf = (session: ScoreBloomSession): ScoreBloomFrame => ({
   revision: session.revision,
@@ -42,6 +53,11 @@ const localDebugAvailable = (): boolean =>
   typeof window !== "undefined" &&
   (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
+const initialSelectedPalette = (): string => {
+  try { return localStorage.getItem(SELECTED_PALETTE_KEY) || "clearing"; }
+  catch { return "clearing"; }
+};
+
 export function GardenScoreBloomBridge({
   active,
   playing,
@@ -49,7 +65,7 @@ export function GardenScoreBloomBridge({
   transport,
   clearings,
   layout,
-  palette = clearingPalette,
+  palette,
 }: {
   active: boolean;
   playing: boolean;
@@ -66,6 +82,9 @@ export function GardenScoreBloomBridge({
   const [clockRevision, setClockRevision] = useState(0);
   const [debugOpen, setDebugOpen] = useState(false);
   const [debugEntityId, setDebugEntityId] = useState<string | null>(null);
+  const [creatorPalettes, setCreatorPalettes] = useState<LoadedCreatorPalette[]>([]);
+  const [selectedPaletteId, setSelectedPaletteId] = useState(initialSelectedPalette);
+  const libraryObjectUrls = useRef<string[]>([]);
   const [reducedMotion, setReducedMotion] = useState(() =>
     typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -81,6 +100,59 @@ export function GardenScoreBloomBridge({
   }, []);
 
   useEffect(() => {
+    if (palette || !active) return;
+    let cancelled = false;
+    const repository = creatorPaletteRepository();
+
+    void (async () => {
+      const next: LoadedCreatorPalette[] = [];
+      const nextUrls: string[] = [];
+      try {
+        const summaries = await repository.list();
+        for (const summary of summaries) {
+          try {
+            const document = await repository.load(summary.id);
+            if (!document) continue;
+            const materialized = materializeCreatorPalette(document);
+            const result = compileCreatorPalette(materialized.draft);
+            if (!result.ok) {
+              Object.values(materialized.objectUrls).forEach(url => URL.revokeObjectURL(url));
+              continue;
+            }
+            nextUrls.push(...Object.values(materialized.objectUrls));
+            next.push({ id: summary.id, name: summary.name, palette: result.palette });
+          } catch {
+            // One damaged custom palette must never take Clearing or the Garden down.
+          }
+        }
+      } catch {
+        // IndexedDB can be disabled or unavailable; Clearing remains the product fallback.
+      }
+
+      if (cancelled) {
+        nextUrls.forEach(url => URL.revokeObjectURL(url));
+        return;
+      }
+      libraryObjectUrls.current.forEach(url => URL.revokeObjectURL(url));
+      libraryObjectUrls.current = nextUrls;
+      setCreatorPalettes(next);
+      setSelectedPaletteId(current =>
+        current === "clearing" || next.some(item => item.id === current) ? current : "clearing",
+      );
+    })();
+
+    return () => { cancelled = true; };
+  }, [active, palette]);
+
+  useEffect(() => () => {
+    libraryObjectUrls.current.forEach(url => URL.revokeObjectURL(url));
+    libraryObjectUrls.current = [];
+  }, []);
+
+  const selectedCreator = creatorPalettes.find(item => item.id === selectedPaletteId);
+  const activePalette = palette ?? selectedCreator?.palette ?? clearingPalette;
+
+  useEffect(() => {
     if (!source) {
       sessionRef.current = null;
       setFrame(null);
@@ -91,7 +163,7 @@ export function GardenScoreBloomBridge({
       trackId: source.trackId,
       seed: source.seed,
       timeline: source.timeline,
-      palette,
+      palette: activePalette,
       reducedMotion,
     });
     const targetTime = transport.running ? transport.time : 0;
@@ -99,7 +171,7 @@ export function GardenScoreBloomBridge({
     sessionRef.current = session;
     setFrame(frameOf(session));
     setDebugEntityId(null);
-  }, [semanticIdentity, reducedMotion, transport, palette]);
+  }, [semanticIdentity, reducedMotion, transport, activePalette]);
 
   useEffect(() => {
     const session = sessionRef.current;
@@ -107,7 +179,7 @@ export function GardenScoreBloomBridge({
     session.seek(0);
     setFrame(frameOf(session));
     setDebugEntityId(null);
-  }, [playing, semanticIdentity, transport, palette]);
+  }, [playing, semanticIdentity, transport, activePalette]);
 
   useEffect(() => {
     if (!active || !playing || transport.paused) return;
@@ -121,7 +193,13 @@ export function GardenScoreBloomBridge({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [active, playing, semanticIdentity, reducedMotion, transport, clockRevision, palette]);
+  }, [active, playing, semanticIdentity, reducedMotion, transport, clockRevision, activePalette]);
+
+  const choosePalette = (id: string) => {
+    setSelectedPaletteId(id);
+    try { localStorage.setItem(SELECTED_PALETTE_KEY, id); }
+    catch { /* preference is optional; palette assets stay in IndexedDB */ }
+  };
 
   async function togglePause() {
     if (!transport.running) return;
@@ -142,9 +220,23 @@ export function GardenScoreBloomBridge({
   const debugAvailable = localDebugAvailable();
 
   return <>
+    {!palette && <label
+      className="score-bloom-palette-picker"
+      onPointerDown={event => event.stopPropagation()}
+    >
+      <span>WORLD</span>
+      <select
+        aria-label="SCORE BLOOM palette"
+        value={selectedCreator ? selectedPaletteId : "clearing"}
+        onChange={event => choosePalette(event.currentTarget.value)}
+      >
+        <option value="clearing">Clearing</option>
+        {creatorPalettes.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+      </select>
+    </label>}
     <ScoreBloomLayer
       snapshot={frame.snapshot}
-      palette={palette}
+      palette={activePalette}
       clearings={clearings}
       layout={layout}
       debugEntityId={debugOpen ? debugEntity?.id : undefined}
