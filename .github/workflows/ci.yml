@@ -80,6 +80,9 @@ jobs:
       - name: Verify Core Meaning
         run: playwright-cli -s=release run-code --filename scripts/verify-core-meaning.cjs
 
+      - name: Verify Creator Palette
+        run: playwright-cli -s=release run-code --filename scripts/verify-creator-palette.cjs
+
       - name: Regress CLEARING
         run: playwright-cli -s=release run-code --filename scripts/verify-clearing.cjs
 

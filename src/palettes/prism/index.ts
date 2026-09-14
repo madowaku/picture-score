@@ -1,0 +1,1 @@
+export { prismProofPalette } from "./definition";
