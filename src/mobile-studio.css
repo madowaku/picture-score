@@ -1,7 +1,8 @@
-/* MOBILE STUDIO UX
+/* MOBILE STUDIO UX v0.2
  * The desktop experience stays unchanged. On small touch screens DRAW becomes
  * a one-screen instrument: canvas first, fixed performance dock, optional
- * music settings sheet. This removes the scroll-vs-draw gesture conflict.
+ * music settings sheet. This removes the scroll-vs-draw gesture conflict while
+ * preserving Picture Score identity, editable artwork titles, and the path to Garden.
  */
 
 .mobile-music-trigger,
