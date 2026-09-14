@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clearingPalette } from "../palettes";
+import type { PaletteDefinition } from "../palettes";
 import { ScoreBloomSession } from "../world/runtime";
 import type { ScoreBloomFrame } from "../world/runtime";
 import type { Clearing, GardenLayout } from "./clearing";
@@ -48,6 +49,7 @@ export function GardenScoreBloomBridge({
   transport,
   clearings,
   layout,
+  palette = clearingPalette,
 }: {
   active: boolean;
   playing: boolean;
@@ -55,6 +57,7 @@ export function GardenScoreBloomBridge({
   transport: GardenTransport;
   clearings: readonly Clearing[];
   layout: GardenLayout;
+  palette?: PaletteDefinition;
 }) {
   const semanticIdentity = garden.objects.length ? gardenScoreBloomIdentity(garden) : "garden:empty";
   const source = useMemo(() => gardenScoreBloomSource(garden), [semanticIdentity]);
@@ -88,7 +91,7 @@ export function GardenScoreBloomBridge({
       trackId: source.trackId,
       seed: source.seed,
       timeline: source.timeline,
-      palette: clearingPalette,
+      palette,
       reducedMotion,
     });
     const targetTime = transport.running ? transport.time : 0;
@@ -96,7 +99,7 @@ export function GardenScoreBloomBridge({
     sessionRef.current = session;
     setFrame(frameOf(session));
     setDebugEntityId(null);
-  }, [semanticIdentity, reducedMotion, transport]);
+  }, [semanticIdentity, reducedMotion, transport, palette]);
 
   useEffect(() => {
     const session = sessionRef.current;
@@ -104,7 +107,7 @@ export function GardenScoreBloomBridge({
     session.seek(0);
     setFrame(frameOf(session));
     setDebugEntityId(null);
-  }, [playing, semanticIdentity, transport]);
+  }, [playing, semanticIdentity, transport, palette]);
 
   useEffect(() => {
     if (!active || !playing || transport.paused) return;
@@ -118,7 +121,7 @@ export function GardenScoreBloomBridge({
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [active, playing, semanticIdentity, reducedMotion, transport, clockRevision]);
+  }, [active, playing, semanticIdentity, reducedMotion, transport, clockRevision, palette]);
 
   async function togglePause() {
     if (!transport.running) return;
@@ -141,7 +144,7 @@ export function GardenScoreBloomBridge({
   return <>
     <ScoreBloomLayer
       snapshot={frame.snapshot}
-      palette={clearingPalette}
+      palette={palette}
       clearings={clearings}
       layout={layout}
       debugEntityId={debugOpen ? debugEntity?.id : undefined}
