@@ -153,6 +153,7 @@ function chooseVoicing(chord: HarmonyCandidate, previous?: number[]) {
   }, voicings[0] ?? [48, 55, 60]);
 }
 
+/** Choose a calm harmonic explanation without rewriting the drawing voice. */
 export function planHarmony(
   drawing: ScoreNote[],
   playNotes: PlayNote[],
@@ -200,6 +201,11 @@ export function planHarmony(
   return result;
 }
 
+/**
+ * Turn the harmonic plan into accompaniment that is actually noticeable.
+ * Sparse drawings get a bass-and-answer breathing pattern, medium drawings get
+ * a pad plus one reply, and dense drawings get only a short two-note floor.
+ */
 function supportPattern(step: HarmonyPlanStep, strength: number): SupportNote[] {
   const end = step.start + step.duration;
   const audibleStrength = Math.sqrt(clamp(strength, 0, 1));
