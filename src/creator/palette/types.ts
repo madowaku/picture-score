@@ -54,6 +54,7 @@ export interface CreatorPaletteDraft {
 }
 
 export type CreatorPaletteValidationCode =
+  | "unsupported-version"
   | "name-required"
   | "id-required"
   | "role-missing"
@@ -67,7 +68,9 @@ export type CreatorPaletteValidationCode =
   | "invalid-source"
   | "invalid-dimensions"
   | "invalid-anchor"
-  | "invalid-scale";
+  | "invalid-scale"
+  | "unknown-placement-preset"
+  | "unknown-motion-preset";
 
 export interface CreatorPaletteValidationError {
   code: CreatorPaletteValidationCode;
