@@ -49,8 +49,6 @@ function noteFit(pitch: number, chord: HarmonyCandidate) {
     const interval = circularDistance(pc, chordPc);
     return Math.min(best, interval);
   }, 6);
-  // Close non-chord tones are allowed to float above the harmony, while
-  // semitone/tritone pressure keeps an incompatible cadence from winning.
   return [4, -1.8, 0.55, 1.35, 1.7, 1.35, -2.4][bestInterval];
 }
 
@@ -155,10 +153,6 @@ function chooseVoicing(chord: HarmonyCandidate, previous?: number[]) {
   }, voicings[0] ?? [48, 55, 60]);
 }
 
-/**
- * Build a deterministic, drawing-respecting harmonic plan.
- * The drawing/play notes are read-only; only MusicIR.support is derived here.
- */
 export function planHarmony(
   drawing: ScoreNote[],
   playNotes: PlayNote[],
@@ -187,34 +181,22 @@ export function planHarmony(
       return delta || HARMONIES.indexOf(a) - HARMONIES.indexOf(b);
     });
     let chosen = ranked[0];
-
-    // Cadence is a preference, never a rewrite: choose C6 only when its average
-    // fit is close enough to the best harmonic explanation of the final bar.
     if (bar === finalBar) {
       const tonic = HARMONIES[0];
       const bestFit = weightedFit(ranked[0], inBar, barStart, barEnd);
       const tonicFit = weightedFit(tonic, inBar, barStart, barEnd);
       if (tonicFit >= bestFit - 0.65) chosen = tonic;
     }
-
     const voicing = chooseVoicing(chosen, previousVoicing);
     const density = barDensity(drawing, playNotes, barStart, barEnd);
     const firstBeat = Math.min(...inBar.map((note) => Math.max(barStart, note.beat)));
     const start = clamp(firstBeat, barStart, Math.max(barStart, barEnd - 0.125));
     const duration = Math.max(0.125, Math.min(3.7, barEnd - start, lengthBeats - start));
-    result.push({
-      bar,
-      chord: chosen.id,
-      voicing,
-      density,
-      start,
-      duration,
-      voiceCount: density >= 0.68 ? 2 : 3,
-    });
+    result.push({ bar, chord: chosen.id, voicing, density, start, duration,
+      voiceCount: density >= 0.68 ? 2 : 3 });
     previousChord = chosen;
     previousVoicing = voicing;
   }
-
   return result;
 }
 
@@ -225,21 +207,13 @@ function supportPattern(step: HarmonyPlanStep, strength: number): SupportNote[] 
   const notes: SupportNote[] = [];
   const add = (pitch: number, beat: number, duration: number, velocity: number) => {
     if (beat >= end - 0.06) return;
-    notes.push({
-      pitch,
-      beat,
+    notes.push({ pitch, beat,
       duration: Math.max(0.08, Math.min(duration, end - beat)),
-      velocity: clamp(velocity, 0.01, 0.28),
-    });
+      velocity: clamp(velocity, 0.01, 0.28) });
   };
-
-  const bass = step.voicing[0];
-  const middle = step.voicing[1];
-  const top = step.voicing[2];
+  const [bass, middle, top] = step.voicing;
 
   if (step.density < 0.38) {
-    // Sparse drawings get a small musical conversation: bass sets the floor,
-    // upper voices answer, then the gesture breathes once more in the bar.
     add(bass, step.start, 0.9, baseVelocity);
     add(middle, step.start + 0.36, 1.1, baseVelocity * 0.82);
     add(top, step.start + 0.36, 1.1, baseVelocity * 0.78);
@@ -252,17 +226,12 @@ function supportPattern(step: HarmonyPlanStep, strength: number): SupportNote[] 
   }
 
   if (step.density < 0.68) {
-    // Medium-density pictures keep a clear pad, with one small upper reply so
-    // accompaniment is audible without becoming a second melody.
     for (const [index, pitch] of step.voicing.entries())
       add(pitch, step.start, 1.55, baseVelocity * (index === 0 ? 1 : 0.78));
-    if (step.duration > 2.15)
-      add(top, step.start + 2, 0.75, baseVelocity * 0.62);
+    if (step.duration > 2.15) add(top, step.start + 2, 0.75, baseVelocity * 0.62);
     return notes;
   }
 
-  // Dense drawings are already rhythmically rich. Give them a clearly audible
-  // but short two-note floor rather than adding more motion.
   add(bass, step.start, 1.25, baseVelocity * 0.88);
   add(top, step.start, 1.25, baseVelocity * 0.68);
   return notes;
