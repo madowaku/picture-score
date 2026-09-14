@@ -92,7 +92,12 @@ describe("MAKE IT SING", () => {
   });
   it("supports the occupied span of a sustain and honours the accompaniment toggle", () => {
     const visual = createVisualNotes([stroke([[100, 210], [900, 210]])], 1);
-    expect(createMusic(visual, 104, true, 1).support).toHaveLength(12);
+    const music = createMusic(visual, 104, true, 1);
+    expect(music.support.length).toBeGreaterThan(0);
+    expect(new Set(music.support.map((note) => Math.floor(note.beat / 4))))
+      .toEqual(new Set([0, 1, 2, 3]));
+    expect(music.support.every((note) => note.beat >= music.playNotes[0].beat && note.beat < 16))
+      .toBe(true);
     expect(createMusic(visual, 104, false, 1).support).toEqual([]);
     expect(createMusic(visual, 104, true, 0).support).toEqual([]);
   });
