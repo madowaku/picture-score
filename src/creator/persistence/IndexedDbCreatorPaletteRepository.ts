@@ -43,7 +43,7 @@ export class IndexedDbCreatorPaletteRepository implements CreatorPaletteReposito
 
   private open(): Promise<IDBDatabase> {
     if (this.dbPromise) return this.dbPromise;
-    this.dbPromise = new Promise((resolve, reject) => {
+    const openingPromise = new Promise<IDBDatabase>((resolve, reject) => {
       if (typeof indexedDB === "undefined") {
         reject(new CreatorPaletteStorageError(
           "storage-unavailable",
@@ -75,11 +75,13 @@ export class IndexedDbCreatorPaletteRepository implements CreatorPaletteReposito
         "storage-unavailable",
         "Creator Palette storage is blocked by another open tab",
       ));
-    }).catch(error => {
+    });
+    const guarded = openingPromise.catch(error => {
       this.dbPromise = null;
       throw error;
     });
-    return this.dbPromise;
+    this.dbPromise = guarded;
+    return guarded;
   }
 
   async list(): Promise<CreatorPaletteSummary[]> {
