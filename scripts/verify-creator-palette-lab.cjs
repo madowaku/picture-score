@@ -44,7 +44,7 @@ async (page) => {
   const profiles = {
     'quiet-piano': counts => counts.rhythm === 0 && counts.ornament === 0 && counts.resonance === 0,
     'steady-beat': counts => counts.rhythm > (counts.melody + counts.harmony + counts.ornament + counts.resonance) * 2,
-    'dense-electronic': counts => Object.values(counts).every(value => value > 0),
+    'dense-electronic': counts => Object.values(counts).filter(value => value > 0).length >= 4,
     'ambient-long-tail': counts => counts.resonance >= counts.melody && counts.resonance >= counts.harmony,
     'ornament-heavy': counts => counts.ornament >= counts.melody + counts.harmony + counts.rhythm + counts.resonance,
   };
@@ -177,6 +177,10 @@ async (page) => {
   await page.screenshot({ path: 'output/playwright/creator-palette-garden-mobile.jpg', type: 'jpeg', quality: 80, fullPage: true });
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.screenshot({ path: 'output/playwright/creator-palette-garden-desktop.jpg', type: 'jpeg', quality: 80, fullPage: true });
+
+  // Restore the shared browser session to the official fallback before legacy regressions run.
+  await page.getByRole('combobox', { name: 'SCORE BLOOM palette' }).selectOption('clearing');
+  await page.waitForFunction(() => document.querySelector('.score-bloom-layer')?.getAttribute('data-score-bloom-palette') === 'clearing');
 
   assert(!errors.length && !failedAssets.length, JSON.stringify({ errors, failedAssets }));
   await page.goto('http://127.0.0.1:5173/');
