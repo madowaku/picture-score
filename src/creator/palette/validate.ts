@@ -1,4 +1,5 @@
 import type { PaletteRole } from "../../palettes";
+import { creatorMotionPresets, creatorPlacementPresets } from "./presets";
 import {
   CREATOR_PALETTE_ROLES,
   type CreatorAssetDraft,
@@ -40,6 +41,9 @@ const error = (
 const isUnit = (value: number): boolean =>
   Number.isFinite(value) && value >= 0 && value <= 1;
 
+const hasOwn = (value: object, key: PropertyKey): boolean =>
+  Object.prototype.hasOwnProperty.call(value, key);
+
 const validateAsset = (
   asset: CreatorAssetDraft,
   role: PaletteRole,
@@ -54,11 +58,11 @@ const validateAsset = (
     errors.push(error("asset-role-mismatch", `${label} image is assigned to the wrong role`, role));
   }
 
-  if (!lowerName.endsWith(expectedExtension)) {
+  if (!expectedExtension || !lowerName.endsWith(expectedExtension)) {
     errors.push(error("unsupported-format", `${label}: SVG, PNG, or WebP only`, role));
   }
 
-  if (asset.mimeType && asset.mimeType.toLowerCase() !== expectedMime) {
+  if (expectedMime && asset.mimeType && asset.mimeType.toLowerCase() !== expectedMime) {
     errors.push(error("mime-mismatch", `${label}: file type does not match its extension`, role));
   }
 
@@ -72,10 +76,7 @@ const validateAsset = (
     errors.push(error("invalid-source", `${label}: could not read this image`, role));
   }
 
-  if (
-    asset.width !== undefined ||
-    asset.height !== undefined
-  ) {
+  if (asset.width !== undefined || asset.height !== undefined) {
     const width = asset.width ?? 0;
     const height = asset.height ?? 0;
     if (
@@ -107,6 +108,9 @@ export function validateCreatorPaletteDraft(
 ): CreatorPaletteValidationError[] {
   const errors: CreatorPaletteValidationError[] = [];
 
+  if (draft.version !== "picture-score:creator-palette-draft:v1") {
+    errors.push(error("unsupported-version", "This Creator Palette draft version is not supported"));
+  }
   if (!draft.id.trim()) errors.push(error("id-required", "Palette id is required"));
   if (!draft.name.trim()) errors.push(error("name-required", "Give your palette a name"));
 
@@ -117,6 +121,22 @@ export function validateCreatorPaletteDraft(
       errors.push(error("role-missing", `${ROLE_LABELS[role]} role is missing`, role));
       continue;
     }
+
+    if (!hasOwn(creatorPlacementPresets, roleDraft.placementPreset)) {
+      errors.push(error(
+        "unknown-placement-preset",
+        `${ROLE_LABELS[role]} placement choice is not supported`,
+        role,
+      ));
+    }
+    if (!hasOwn(creatorMotionPresets, roleDraft.motionPreset)) {
+      errors.push(error(
+        "unknown-motion-preset",
+        `${ROLE_LABELS[role]} motion choice is not supported`,
+        role,
+      ));
+    }
+
     if (!roleDraft.asset) {
       errors.push(error("asset-missing", `Add an image for ${ROLE_LABELS[role]}`, role));
       continue;
