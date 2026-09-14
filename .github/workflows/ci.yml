@@ -74,6 +74,9 @@ jobs:
       - name: Open browser session
         run: playwright-cli -s=release open http://127.0.0.1:5173
 
+      - name: Verify PUBLIC GARDEN
+        run: playwright-cli -s=release run-code --filename scripts/verify-public-garden.cjs
+
       - name: Verify SCORE BLOOM
         run: playwright-cli -s=release run-code --filename scripts/verify-score-bloom.cjs
 
@@ -100,6 +103,6 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: score-bloom-browser-qa
+          name: public-garden-release-qa
           path: output/playwright
           if-no-files-found: warn
