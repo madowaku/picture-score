@@ -218,6 +218,56 @@ export function planHarmony(
   return result;
 }
 
+function supportPattern(step: HarmonyPlanStep, strength: number): SupportNote[] {
+  const end = step.start + step.duration;
+  const audibleStrength = Math.sqrt(clamp(strength, 0, 1));
+  const baseVelocity = (0.24 - step.density * 0.07) * audibleStrength;
+  const notes: SupportNote[] = [];
+  const add = (pitch: number, beat: number, duration: number, velocity: number) => {
+    if (beat >= end - 0.06) return;
+    notes.push({
+      pitch,
+      beat,
+      duration: Math.max(0.08, Math.min(duration, end - beat)),
+      velocity: clamp(velocity, 0.01, 0.28),
+    });
+  };
+
+  const bass = step.voicing[0];
+  const middle = step.voicing[1];
+  const top = step.voicing[2];
+
+  if (step.density < 0.38) {
+    // Sparse drawings get a small musical conversation: bass sets the floor,
+    // upper voices answer, then the gesture breathes once more in the bar.
+    add(bass, step.start, 0.9, baseVelocity);
+    add(middle, step.start + 0.36, 1.1, baseVelocity * 0.82);
+    add(top, step.start + 0.36, 1.1, baseVelocity * 0.78);
+    if (step.duration > 2.25) {
+      add(bass, step.start + 2, 0.72, baseVelocity * 0.8);
+      add(middle, step.start + 2.34, 0.92, baseVelocity * 0.68);
+      add(top, step.start + 2.34, 0.92, baseVelocity * 0.64);
+    }
+    return notes;
+  }
+
+  if (step.density < 0.68) {
+    // Medium-density pictures keep a clear pad, with one small upper reply so
+    // accompaniment is audible without becoming a second melody.
+    for (const [index, pitch] of step.voicing.entries())
+      add(pitch, step.start, 1.55, baseVelocity * (index === 0 ? 1 : 0.78));
+    if (step.duration > 2.15)
+      add(top, step.start + 2, 0.75, baseVelocity * 0.62);
+    return notes;
+  }
+
+  // Dense drawings are already rhythmically rich. Give them a clearly audible
+  // but short two-note floor rather than adding more motion.
+  add(bass, step.start, 1.25, baseVelocity * 0.88);
+  add(top, step.start, 1.25, baseVelocity * 0.68);
+  return notes;
+}
+
 export function createHarmonySupport(
   drawing: ScoreNote[],
   playNotes: PlayNote[],
@@ -225,16 +275,7 @@ export function createHarmonySupport(
   lengthBeats = 16,
 ): SupportNote[] {
   const strength = clamp(magnet, 0, 1);
-  return planHarmony(drawing, playNotes, strength, lengthBeats).flatMap((step) => {
-    const pitches = step.voiceCount === 2
-      ? [step.voicing[0], step.voicing[2]]
-      : step.voicing;
-    const baseVelocity = (0.13 - step.density * 0.045) * strength;
-    return pitches.map((pitch, index) => ({
-      pitch,
-      beat: step.start,
-      duration: step.duration,
-      velocity: baseVelocity * (index === 0 ? 1 : 0.74),
-    }));
-  });
+  return planHarmony(drawing, playNotes, strength, lengthBeats)
+    .flatMap((step) => supportPattern(step, strength))
+    .sort((a, b) => a.beat - b.beat || a.pitch - b.pitch);
 }
