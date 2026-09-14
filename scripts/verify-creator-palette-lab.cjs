@@ -27,12 +27,12 @@ async (page) => {
   const creatorCount = await page.locator('[data-score-bloom-entity]').count();
   assert(creatorCount > 0, 'creator palette produced no entities');
 
-  await page.getByRole('button', { name: 'Clearing' }).click();
+  await page.getByRole('button', { name: 'Clearing', exact: true }).click();
   await page.waitForTimeout(100);
   const clearingHtml = await page.locator('.score-bloom-layer').innerHTML();
   assert(clearingHtml !== creatorHtml, 'Clearing and Creator worlds are identical');
 
-  await page.getByRole('button', { name: 'My Palette' }).click();
+  await page.getByRole('button', { name: 'My Palette', exact: true }).click();
   await page.waitForTimeout(100);
   const beforeReplay = await page.locator('.score-bloom-layer').innerHTML();
   await slider.fill('0');
@@ -83,7 +83,7 @@ async (page) => {
 
   // Smoke the real File -> object URL -> draft -> compiler path with a local SVG.
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByRole('button', { name: 'Clear' }).click();
+  await page.getByRole('button', { name: 'Clear', exact: true }).click();
   const labels = ['Melody', 'Harmony', 'Rhythm', 'Ornament', 'Resonance'];
   for (const label of labels) {
     await page.getByLabel(`Add image for ${label}`).setInputFiles('scripts/fixtures/creator-upload.svg');
