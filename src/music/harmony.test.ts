@@ -112,6 +112,28 @@ describe("HARMONY LAB", () => {
     expect(Math.max(...denseSupport.map((note) => note.velocity))).toBeLessThan(
       Math.max(...sparseSupport.map((note) => note.velocity)),
     );
+    expect(new Set(denseSupport.map((note) => note.beat)).size).toBeLessThanOrEqual(
+      new Set(sparseSupport.map((note) => note.beat)).size,
+    );
+  });
+
+  it("gives sparse drawings a breathing accompaniment with more than one onset", () => {
+    const played = [play(60, 0, 1.2), play(64, 1.4, 0.8)];
+    const support = createHarmonySupport([], played, 1);
+    const onsets = [...new Set(support.map((note) => note.beat))].sort((a, b) => a - b);
+    expect(onsets.length).toBeGreaterThanOrEqual(3);
+    expect(onsets[0]).toBe(0);
+    expect(onsets.some((beat) => beat > 0 && beat < 1)).toBe(true);
+  });
+
+  it("keeps accompaniment audible at a middle music-strength setting", () => {
+    const played = [play(60, 0, 1.4), play(64, 1.5, 1)];
+    const support = createHarmonySupport([], played, 0.5);
+    expect(support.length).toBeGreaterThan(0);
+    expect(Math.max(...support.map((note) => note.velocity))).toBeGreaterThan(0.12);
+    expect(Math.max(...support.map((note) => note.velocity))).toBeLessThan(
+      Math.min(...played.map((note) => note.velocity)),
+    );
   });
 
   it("prefers a C-family landing when the final bar agrees", () => {
@@ -132,12 +154,12 @@ describe("HARMONY LAB", () => {
     expect(plan.at(-1)?.chord).not.toBe("C6");
   });
 
-  it("keeps support safely below the drawing voice", () => {
+  it("keeps support clearly below the drawing voice even after the fun pass", () => {
     const drawing = [visual(60, 0, 0), visual(64, 2, 1)];
     const played = [play(60, 0, 2), play(64, 2, 2)];
     const support = createHarmonySupport(drawing, played, 1);
     expect(support.length).toBeGreaterThan(0);
-    expect(Math.max(...support.map((note) => note.velocity))).toBeLessThan(0.2);
+    expect(Math.max(...support.map((note) => note.velocity))).toBeLessThan(0.29);
     expect(Math.max(...support.map((note) => note.velocity))).toBeLessThan(
       Math.min(...played.map((note) => note.velocity)),
     );
