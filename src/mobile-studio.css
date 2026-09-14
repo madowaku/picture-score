@@ -11,7 +11,7 @@
 
 @media (max-width: 760px) {
   :root {
-    --mobile-studio-topbar: 54px;
+    --mobile-studio-topbar: 58px;
     --mobile-studio-nav: 44px;
     --mobile-studio-dock: 76px;
     --mobile-studio-safe: env(safe-area-inset-bottom, 0px);
@@ -33,24 +33,76 @@
   body:has(main:not([hidden])) .topbar {
     height: var(--mobile-studio-topbar);
     min-height: var(--mobile-studio-topbar);
-    gap: 8px;
+    gap: 7px;
   }
 
+  /* Keep enough identity in the studio that it still feels like Picture Score. */
   body:has(main:not([hidden])) .brand {
-    gap: 0;
+    gap: 5px;
+    min-width: 92px;
+    flex-shrink: 0;
+    font-size: 10.5px;
+    line-height: 1.05;
+    letter-spacing: 0.45px;
+    text-transform: uppercase;
   }
 
   body:has(main:not([hidden])) .brand > span {
-    display: none;
+    display: inline;
   }
 
   body:has(main:not([hidden])) .logo-mark {
-    width: 34px;
-    height: 34px;
+    width: 29px;
+    height: 29px;
+  }
+
+  /* Artwork title stays editable in the one-screen studio. */
+  body:has(main:not([hidden])) .project-name {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0 1px;
+    gap: 3px;
+    color: #7b7e72;
+  }
+
+  body:has(main:not([hidden])) .project-name input {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 2px 5px;
+    border: 0;
+    border-bottom: 1px dashed #d4d2c8;
+    border-radius: 0;
+    background: transparent;
+    color: #676b60;
+    font-size: 10.5px;
+    text-align: center;
+    cursor: text;
+  }
+
+  body:has(main:not([hidden])) .project-name input:focus {
+    border-bottom-style: solid;
+    border-bottom-color: #94a185;
+    background: #fffdf780;
+  }
+
+  body:has(main:not([hidden])) .project-name::after {
+    content: "✎";
+    flex: 0 0 auto;
+    align-self: center;
+    margin-left: 1px;
+    color: #979b8f;
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  body:has(main:not([hidden])) .saved-indicator {
+    display: none;
   }
 
   body:has(main:not([hidden])) .header-actions {
-    gap: 2px;
+    gap: 1px;
+    flex-shrink: 0;
   }
 
   body:has(main:not([hidden])) .header-divider,
@@ -61,9 +113,9 @@
 
   body:has(main:not([hidden])) .undo-button,
   body:has(main:not([hidden])) .save-button {
-    width: 44px;
-    min-width: 44px;
-    height: 44px;
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
     padding: 0;
     justify-content: center;
   }
@@ -178,7 +230,8 @@
 
   body:has(main:not([hidden])) .canvas-caption {
     width: 100%;
-    text-align: center;
+    padding-left: 7px;
+    text-align: left;
     font-size: 9px;
   }
 
@@ -229,8 +282,7 @@
   }
 
   body:has(main:not([hidden])) .tool-switch button span,
-  body:has(main:not([hidden])) .control-hint,
-  body:has(main:not([hidden])) .place-garden {
+  body:has(main:not([hidden])) .control-hint {
     display: none;
   }
 
@@ -240,6 +292,37 @@
     height: 50px;
     min-height: 50px;
     border-radius: 12px;
+  }
+
+  /* Garden is the next chapter after hearing a drawing, not a hidden setting. */
+  body:has(main:not([hidden])) .place-garden {
+    display: flex;
+    position: fixed;
+    z-index: 51;
+    right: 13px;
+    bottom: calc(var(--mobile-studio-dock) + var(--mobile-studio-safe) + 7px);
+    min-height: 38px;
+    padding: 0 13px;
+    border: 1px solid #d9dfd2;
+    border-radius: 999px;
+    background: #f3f6ed;
+    color: #5e7353;
+    box-shadow: 0 3px 12px #34402d13;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.25px;
+    white-space: nowrap;
+  }
+
+  body:has(main:not([hidden])) .place-garden:disabled {
+    display: none;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .place-garden {
+    display: none;
   }
 
   /* The detailed music controls are dormant until the MUSIC trigger opens them. */
@@ -366,9 +449,10 @@
     min-height: 44px;
   }
 
+  /* Counts are useful diagnostics, but not useful language for a first-time player. */
   body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-count,
-  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint {
-    margin-top: 6px;
+  body.mobile-music-open:has(main:not([hidden])) .magnet-title > span {
+    display: none;
   }
 
   body.mobile-music-open:has(main:not([hidden])) .magnet-title {
@@ -376,11 +460,56 @@
   }
 
   body.mobile-music-open:has(main:not([hidden])) .slider-labels {
-    margin-top: 1px;
+    margin-top: 0;
+    font-size: 0;
+    letter-spacing: 0;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .slider-labels span::after {
+    font-size: 9px;
+    letter-spacing: 0.15px;
+  }
+
+  html[lang="ja"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:first-child::after {
+    content: "線の形をそのまま";
+  }
+
+  html[lang="ja"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:last-child::after {
+    content: "曲として整える";
+  }
+
+  html[lang="en"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:first-child::after {
+    content: "Keep the drawing";
+  }
+
+  html[lang="en"] body.mobile-music-open:has(main:not([hidden])) .slider-labels span:last-child::after {
+    content: "Shape into music";
   }
 
   body.mobile-music-open:has(main:not([hidden])) .slider-row input {
     height: 44px;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint {
+    margin: 7px 0 0;
+    min-height: 32px;
+    font-size: 0;
+    line-height: 1.65;
+  }
+
+  body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint::after {
+    display: block;
+    color: #727969;
+    font-size: 9.5px;
+    line-height: 1.65;
+  }
+
+  html[lang="ja"] body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint::after {
+    content: "左は描いた線の動きを細かく音に。右ほど音を選んで、聴きやすいフレーズに整えます。";
+  }
+
+  html[lang="en"] body.mobile-music-open:has(main:not([hidden])) .magnet-control .interpretation-hint::after {
+    content: "Left follows the details of your line. Move right to select notes and shape a smoother musical phrase.";
   }
 
   /* Keep floating notices above both the dock and the settings sheet. */
@@ -398,6 +527,32 @@
 }
 
 @media (max-width: 380px) {
+  body:has(main:not([hidden])) .brand {
+    min-width: 84px;
+    font-size: 9px;
+    gap: 3px;
+  }
+
+  body:has(main:not([hidden])) .logo-mark {
+    width: 27px;
+    height: 27px;
+  }
+
+  body:has(main:not([hidden])) .project-name input {
+    font-size: 10px;
+  }
+
+  body:has(main:not([hidden])) .project-name::after {
+    font-size: 10px;
+  }
+
+  body:has(main:not([hidden])) .undo-button,
+  body:has(main:not([hidden])) .save-button {
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+  }
+
   body:has(main:not([hidden])) .controls {
     grid-template-columns: 96px minmax(112px, 1fr);
     padding-left: 7px;
@@ -418,6 +573,12 @@
     right: 7px;
     width: 58px;
     min-width: 58px;
+  }
+
+  body:has(main:not([hidden])) .place-garden {
+    right: 8px;
+    padding-inline: 11px;
+    font-size: 9px;
   }
 
   body.mobile-music-open:has(main:not([hidden])) .instrument-options button {
