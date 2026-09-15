@@ -28,7 +28,7 @@ export function HomeView({
   if (!active) return null;
 
   return (
-    <main className="home-view" aria-label={ja ? "Picture Score ホーム" : "Picture Score home"}>
+    <section className="home-view" role="main" aria-label={ja ? "Picture Score ホーム" : "Picture Score home"}>
       <section className="home-hero">
         <BrandLogo />
         <div className="home-copy">
@@ -102,6 +102,6 @@ export function HomeView({
           <div><span>3</span><Sprout size={22} /><strong>{ja ? "庭に置く" : "Plant it"}</strong><small>{ja ? "音を育てる" : "Let sounds grow"}</small></div>
         </div>
       </section>
-    </main>
+    </section>
   );
 }
