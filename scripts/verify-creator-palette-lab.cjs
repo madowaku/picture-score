@@ -101,7 +101,23 @@ async (page) => {
   }
   await page.getByLabel('Palette name').fill('Persisted Palette');
   await page.waitForTimeout(100);
-  assert(await mainAttr('data-creator-lab-valid') === 'true', `[${phase}] real file uploads did not compile`);
+  const uploadState = await page.evaluate(() => ({
+    valid: document.querySelector('main')?.getAttribute('data-creator-lab-valid') ?? null,
+    status: document.querySelector('.creator-lab-status')?.textContent?.trim() ?? null,
+    roles: [...document.querySelectorAll('[data-creator-role]')].map(card => ({
+      role: card.getAttribute('data-creator-role'),
+      fileLabel: card.querySelector('.creator-lab-file span')?.textContent?.trim() ?? null,
+      inputFile: card.querySelector('input[type="file"]')?.files?.[0]
+        ? {
+            name: card.querySelector('input[type="file"]').files[0].name,
+            type: card.querySelector('input[type="file"]').files[0].type,
+            size: card.querySelector('input[type="file"]').files[0].size,
+          }
+        : null,
+      messages: [...card.querySelectorAll('.creator-lab-errors span')].map(node => node.textContent?.trim()),
+    })),
+  }));
+  assert(uploadState.valid === 'true', `[${phase}] real file uploads did not compile: ${JSON.stringify(uploadState)}`);
   assertHealthy();
 
   const uploadSlider = page.getByRole('slider', { name: 'Creator Lab preview time' });
