@@ -24,8 +24,8 @@ export function RootShell() {
 
   const current = useMemo(() => loadProject(), [homeVersion]);
   const recent = useMemo(
-    () => loadRecentProject() ?? (current.strokes.length ? current : null),
-    [current, homeVersion],
+    () => (current.strokes.length ? current : loadRecentProject()),
+    [current],
   );
 
   useEffect(() => {
