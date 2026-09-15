@@ -59,3 +59,4 @@ replaceOnce(
 
 fs.writeFileSync(path, source);
 console.log("Brand & Home patch applied to src/App.tsx");
+// workflow trigger
