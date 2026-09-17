@@ -5,30 +5,39 @@ const smoothstep = (value: number) => {
 };
 
 /**
- * The drawing/music slider also controls how many visual notes are revealed.
- * Keep the left edge almost pure drawing, then grow to a readable note cloud
- * without ever restoring every analysis sample.
+ * The drawing/music slider controls visual-note density as a staged morph:
+ * almost pure ink at the left, a long expressive blend through the middle,
+ * then a denser score near the music edge. We still never restore every
+ * analysis sample, so the drawing does not turn back into a toothbrush.
  */
 export function visualNoteRatio(strength: number): number {
-  return 0.02 + 0.32 * smoothstep(strength);
+  const s = clamp01(strength);
+  if (s <= 0.1) return 0.012 * smoothstep(s / 0.1);
+  if (s <= 0.7) {
+    return 0.012 + 0.188 * smoothstep((s - 0.1) / 0.6);
+  }
+  return 0.2 + 0.14 * smoothstep((s - 0.7) / 0.3);
 }
 
 /**
- * Saved ink remains fully visible through the drawing half of the slider,
- * then fades away so the music end becomes a note-only score.
+ * Keep the original drawing fully present until the music-heavy end of the
+ * slider. Between roughly 70% and 93% the ink falls away quickly, leaving a
+ * clean note-only score for the final stretch.
  */
 export function drawingPresence(strength: number): number {
-  const fade = smoothstep((clamp01(strength) - 0.52) / 0.43);
+  const fade = smoothstep((clamp01(strength) - 0.68) / 0.25);
   return 1 - fade;
 }
 
 /** Stable, evenly spread indexes avoid the old toothbrush / eyelash density. */
 export function selectedIndexes(length: number, strength: number): number[] {
   if (length <= 0) return [];
+  const s = clamp01(strength);
+  if (s <= 0.02) return [];
   if (length === 1) return [0];
   const count = Math.max(
     1,
-    Math.min(length, 18, Math.round(length * visualNoteRatio(strength))),
+    Math.min(length, 18, Math.round(length * visualNoteRatio(s))),
   );
   if (count === 1) return [Math.floor((length - 1) / 2)];
   return Array.from(
@@ -94,8 +103,9 @@ function syncMorph() {
 }
 
 /**
- * Prototype bridge for v0.2. It only touches the presentation layer; React's
- * music model, playback selection, timing and saved Project remain unchanged.
+ * Presentation-only bridge. It never changes React's music model, playback
+ * selection, timing or the saved Project; it only changes how the same score
+ * is revealed on the canvas.
  */
 export function installPuchiMorph() {
   let frame = 0;
@@ -110,9 +120,7 @@ export function installPuchiMorph() {
 
   document.addEventListener("input", onInput);
   const root = document.getElementById("root");
-  const observer = root
-    ? new MutationObserver(schedule)
-    : undefined;
+  const observer = root ? new MutationObserver(schedule) : undefined;
   observer?.observe(root!, { childList: true, subtree: true });
   schedule();
 
