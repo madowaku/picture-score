@@ -1,55 +1,53 @@
-/* Picture Score — puchi notes v0.1
+/* Picture Score — puchi notes v0.1.1
  *
- * Keep the drawing as the hero. The score layer only shows notes that are
- * actual play anchors, then gives those notes a rounder head and a shorter,
- * softer stem. This is deliberately presentation-only: music generation and
- * timing stay untouched.
+ * Keep the drawing as the hero. Only actual play anchors are shown, and each
+ * note is lifted a little away from the source stroke so the rounded head can
+ * be read before the stem. Music generation and timing stay untouched.
  */
 
-/* The interpretation layer already marks the notes that actually anchor a
- * performed sound. Hide the analysis-only samples instead of drawing a row of
- * tiny ticks along every stroke. */
+/* Analysis-only samples are useful to interpretation but noisy as decoration. */
 .score-note.visual-only {
   display: none;
 }
 
 .score-note.play-anchor {
-  opacity: 0.82;
+  opacity: 0.84;
 }
 
-/* A slightly plumper head reads as a tiny note rather than a pin. */
+/* Let the head read first: larger, rounder, and a few units above the ink. */
 .score-note.play-anchor .note-head {
   fill: var(--note-color, #b14a34);
-  transform: rotate(-20deg) scale(1.22, 1.16);
+  transform: translateY(-4.5px) rotate(-20deg) scale(1.5, 1.34);
   transform-box: fill-box;
   transform-origin: center;
 }
 
-/* Keep just the first part of the existing stem path. The rounded cap makes
- * it feel hand-drawn and prevents the long needle-like look. */
+/* The stem follows the lifted head, but stays deliberately short and soft. */
 .score-note.play-anchor .note-stem {
   stroke: var(--note-color, #b14a34);
-  stroke-width: 1.45;
+  stroke-width: 1.5;
   stroke-linecap: round;
-  stroke-dasharray: 8 20;
-  opacity: 0.86;
+  stroke-linejoin: round;
+  stroke-dasharray: 5.8 20;
+  opacity: 0.82;
+  transform: translateY(-4.5px);
 }
 
 .score-note.play-anchor .note-halo {
   fill: var(--note-color, #b14a34);
   opacity: 0;
-  transform: scale(0.72);
+  transform: translateY(-4.5px) scale(0.68);
   transform-box: fill-box;
   transform-origin: center;
 }
 
-/* Playback should feel like a small pulse, not a spotlight. */
+/* Playback is a tiny bloom rather than a spotlight. */
 .score-note.play-anchor.note-active {
   opacity: 1;
 }
 
 .score-note.play-anchor.note-active .note-halo {
-  opacity: 0.12;
+  animation: puchi-note-bloom 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .score-note.play-anchor.note-active .note-head {
@@ -62,22 +60,61 @@
   opacity: 1;
 }
 
-/* On narrow canvases the SVG is commonly stretched vertically. Give the head
- * a little extra horizontal body so it still reads as a note instead of a
- * vertical scratch. */
+@keyframes puchi-note-bloom {
+  0% {
+    opacity: 0;
+    transform: translateY(-4.5px) scale(0.58);
+  }
+  45% {
+    opacity: 0.14;
+    transform: translateY(-4.5px) scale(0.88);
+  }
+  100% {
+    opacity: 0.08;
+    transform: translateY(-4.5px) scale(0.72);
+  }
+}
+
+/* Narrow canvases stretch the SVG vertically, so give the head extra body and
+ * trim the stem another step. The note should still read as a note, not a pin. */
 @media (max-width: 760px) {
   .score-note.play-anchor .note-head {
-    transform: rotate(-20deg) scale(1.55, 1.12);
+    transform: translateY(-4px) rotate(-20deg) scale(1.86, 1.28);
   }
 
   .score-note.play-anchor .note-stem {
-    stroke-dasharray: 7 20;
-    stroke-width: 1.6;
+    stroke-dasharray: 5 20;
+    stroke-width: 1.65;
+    transform: translateY(-4px);
+  }
+
+  .score-note.play-anchor .note-halo {
+    transform: translateY(-4px) scale(0.66);
+  }
+
+  @keyframes puchi-note-bloom {
+    0% {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.56);
+    }
+    45% {
+      opacity: 0.14;
+      transform: translateY(-4px) scale(0.86);
+    }
+    100% {
+      opacity: 0.08;
+      transform: translateY(-4px) scale(0.7);
+    }
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .score-note {
     transition: opacity 0.12s;
+  }
+
+  .score-note.play-anchor.note-active .note-halo {
+    animation: none;
+    opacity: 0.08;
   }
 }
