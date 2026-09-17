@@ -1,0 +1,83 @@
+/* Picture Score — puchi notes v0.1
+ *
+ * Keep the drawing as the hero. The score layer only shows notes that are
+ * actual play anchors, then gives those notes a rounder head and a shorter,
+ * softer stem. This is deliberately presentation-only: music generation and
+ * timing stay untouched.
+ */
+
+/* The interpretation layer already marks the notes that actually anchor a
+ * performed sound. Hide the analysis-only samples instead of drawing a row of
+ * tiny ticks along every stroke. */
+.score-note.visual-only {
+  display: none;
+}
+
+.score-note.play-anchor {
+  opacity: 0.82;
+}
+
+/* A slightly plumper head reads as a tiny note rather than a pin. */
+.score-note.play-anchor .note-head {
+  fill: var(--note-color, #b14a34);
+  transform: rotate(-20deg) scale(1.22, 1.16);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Keep just the first part of the existing stem path. The rounded cap makes
+ * it feel hand-drawn and prevents the long needle-like look. */
+.score-note.play-anchor .note-stem {
+  stroke: var(--note-color, #b14a34);
+  stroke-width: 1.45;
+  stroke-linecap: round;
+  stroke-dasharray: 8 20;
+  opacity: 0.86;
+}
+
+.score-note.play-anchor .note-halo {
+  fill: var(--note-color, #b14a34);
+  opacity: 0;
+  transform: scale(0.72);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* Playback should feel like a small pulse, not a spotlight. */
+.score-note.play-anchor.note-active {
+  opacity: 1;
+}
+
+.score-note.play-anchor.note-active .note-halo {
+  opacity: 0.12;
+}
+
+.score-note.play-anchor.note-active .note-head {
+  fill: var(--note-color, #b14a34);
+  filter: brightness(1.08) drop-shadow(0 0 2px color-mix(in srgb, var(--note-color, #b14a34) 55%, transparent));
+}
+
+.score-note.play-anchor.note-active .note-stem {
+  stroke: var(--note-color, #b14a34);
+  opacity: 1;
+}
+
+/* On narrow canvases the SVG is commonly stretched vertically. Give the head
+ * a little extra horizontal body so it still reads as a note instead of a
+ * vertical scratch. */
+@media (max-width: 760px) {
+  .score-note.play-anchor .note-head {
+    transform: rotate(-20deg) scale(1.55, 1.12);
+  }
+
+  .score-note.play-anchor .note-stem {
+    stroke-dasharray: 7 20;
+    stroke-width: 1.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .score-note {
+    transition: opacity 0.12s;
+  }
+}

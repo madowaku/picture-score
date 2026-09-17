@@ -6,6 +6,7 @@ import "./styles.css";
 import "./wonder/wonder.css";
 import "./garden/alive.css";
 import "./garden/clearing.css";
+import "./ui/puchi-notes.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
