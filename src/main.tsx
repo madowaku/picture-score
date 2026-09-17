@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import { LanguageProvider } from "./i18n/LanguageContext";
+import { installPuchiMorph } from "./ui/puchiMorph";
 import "./styles.css";
 import "./wonder/wonder.css";
 import "./garden/alive.css";
@@ -15,3 +16,5 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </LanguageProvider>
   </React.StrictMode>,
 );
+
+installPuchiMorph();
