@@ -263,9 +263,15 @@ export default function App() {
   const modeLabel =
     project.magnet < 0.3
       ? "DRAWING"
-      : project.magnet > 0.7
-        ? "MUSIC"
-        : "BALANCE";
+      : project.magnet > 0.72
+        ? "SCORE"
+        : "PICTURE + NOTES";
+  const interpretationHint =
+    project.magnet < 0.3
+      ? "線の形を、そのまま。"
+      : project.magnet > 0.72
+        ? "絵が、楽譜になる。"
+        : "絵の中に、音が見えてくる。";
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -1134,7 +1140,7 @@ export default function App() {
             </div>
             <div className="slider-labels">
               <span>{t("DRAWING")}</span>
-              <span>{t("MUSIC")}</span>
+              <span>{t("SCORE")}</span>
             </div>
             <div className="interpretation-count" data-testid="interpretation-count"
               data-visual-count={notes.length} data-play-count={music.playNotes.length}>
@@ -1144,8 +1150,7 @@ export default function App() {
               {music.support.length > 0 && <span className="support-count">{t("＋伴奏")}</span>}
             </div>
             <p id="interpretation-hint" className="interpretation-hint">
-              {project.magnet < 0.3 ? t("線の細かな表情まで、音に。") :
-                project.magnet > 0.7 ? t("音を選んで、ゆったり歌う。") : t("絵のかたちを、ひとつのフレーズに。")}
+              {t(interpretationHint)}
             </p>
           </div>
         </section>
