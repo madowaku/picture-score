@@ -678,6 +678,26 @@ export const messages: Record<string, Record<Language, string>> = {
   "BALANCE": {
     "ja": "バランス",
     "en": "BALANCE"
+  },
+  "PICTURE + NOTES": {
+    "ja": "絵と音",
+    "en": "PICTURE + NOTES"
+  },
+  "SCORE": {
+    "ja": "楽譜",
+    "en": "SCORE"
+  },
+  "線の形を、そのまま。": {
+    "ja": "線の形を、そのまま。",
+    "en": "Keep the drawing as it is."
+  },
+  "絵の中に、音が見えてくる。": {
+    "ja": "絵の中に、音が見えてくる。",
+    "en": "Notes begin to appear inside the drawing."
+  },
+  "絵が、楽譜になる。": {
+    "ja": "絵が、楽譜になる。",
+    "en": "The drawing becomes a score."
   }
 };
 
