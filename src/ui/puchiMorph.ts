@@ -4,11 +4,14 @@ const smoothstep = (value: number) => {
   return t * t * (3 - 2 * t);
 };
 
+export const MORPH_NOTE_MAX = 18;
+export const MORPH_TRANSITION_MS = 150;
+export const MORPH_INK_HOLD_END = 0.6;
+export const MORPH_INK_FADE_END = 0.93;
+
 /**
- * The drawing/music slider controls visual-note density as a staged morph:
- * almost pure ink at the left, a long expressive blend through the middle,
- * then a denser score near the music edge. We still never restore every
- * analysis sample, so the drawing does not turn back into a toothbrush.
+ * Visual-note density grows gently through the middle. The ratio is intentionally
+ * bounded: even at the score edge we never restore every analysis sample.
  */
 export function visualNoteRatio(strength: number): number {
   const s = clamp01(strength);
@@ -20,24 +23,45 @@ export function visualNoteRatio(strength: number): number {
 }
 
 /**
- * Keep the original drawing fully present until the music-heavy end of the
- * slider. Between roughly 70% and 93% the ink falls away quickly, leaving a
- * clean note-only score for the final stretch.
+ * A separate cap keeps 40–60% from saturating too early. This makes the middle
+ * a real blend state rather than "almost score already".
+ */
+export function visualNoteCap(strength: number): number {
+  const s = clamp01(strength);
+  if (s <= 0.02) return 0;
+  if (s <= 0.1) return Math.max(1, Math.round(2 * smoothstep(s / 0.1)));
+  if (s <= 0.5) return Math.round(2 + 8 * smoothstep((s - 0.1) / 0.4));
+  if (s <= 0.7) return Math.round(10 + 3 * smoothstep((s - 0.5) / 0.2));
+  if (s <= 0.85) return Math.round(13 + 3 * smoothstep((s - 0.7) / 0.15));
+  return Math.round(16 + 2 * smoothstep((s - 0.85) / 0.15));
+}
+
+/**
+ * Ink stays dominant through the blend. Notes appear first; the drawing only
+ * begins to recede after 60%, then falls away decisively near the score edge.
  */
 export function drawingPresence(strength: number): number {
-  const fade = smoothstep((clamp01(strength) - 0.68) / 0.25);
-  return 1 - fade;
+  const s = clamp01(strength);
+  if (s <= MORPH_INK_HOLD_END) return 1;
+  if (s <= 0.78) {
+    return 1 - 0.15 * smoothstep((s - MORPH_INK_HOLD_END) / 0.18);
+  }
+  if (s <= MORPH_INK_FADE_END) {
+    return 0.85 * (1 - smoothstep((s - 0.78) / 0.15));
+  }
+  return 0;
 }
 
 /** Stable, evenly spread indexes avoid the old toothbrush / eyelash density. */
 export function selectedIndexes(length: number, strength: number): number[] {
   if (length <= 0) return [];
   const s = clamp01(strength);
-  if (s <= 0.02) return [];
+  const cap = visualNoteCap(s);
+  if (cap <= 0) return [];
   if (length === 1) return [0];
   const count = Math.max(
     1,
-    Math.min(length, 18, Math.round(length * visualNoteRatio(s))),
+    Math.min(length, MORPH_NOTE_MAX, cap, Math.round(length * visualNoteRatio(s))),
   );
   if (count === 1) return [Math.floor((length - 1) / 2)];
   return Array.from(
@@ -86,11 +110,17 @@ function syncMorph() {
   }
 
   const sourceStrokes = canvas.querySelector<SVGGElement>(".source-strokes");
-  if (sourceStrokes) sourceStrokes.style.opacity = String(0.66 * drawingPresence(strength));
+  if (sourceStrokes) {
+    sourceStrokes.style.opacity = String(0.66 * drawingPresence(strength));
+  }
 
   canvas.dataset.morphMode =
-    strength < 0.3 ? "drawing" : strength > 0.7 ? "music" : "balance";
+    strength < 0.3 ? "drawing" : strength > 0.72 ? "score" : "blend";
   canvas.style.setProperty("--morph-strength", strength.toFixed(3));
+  canvas.style.setProperty(
+    "--morph-active-halo",
+    (0.1 + 0.08 * smoothstep(strength)).toFixed(3),
+  );
 
   const counter = document.querySelector<HTMLElement>(
     '[data-testid="interpretation-count"]',
@@ -104,8 +134,8 @@ function syncMorph() {
 
 /**
  * Presentation-only bridge. It never changes React's music model, playback
- * selection, timing or the saved Project; it only changes how the same score
- * is revealed on the canvas.
+ * selection, timing or saved Project; it only changes how the same score is
+ * revealed on the canvas.
  */
 export function installPuchiMorph() {
   let frame = 0;
