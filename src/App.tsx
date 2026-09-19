@@ -225,12 +225,14 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
     clearTimeout(finishTimer.current);
   }, []);
 
+  const previousInitialSpace = useRef(initialSpace);
   useEffect(() => {
-    if (space === initialSpace) return;
+    if (previousInitialSpace.current === initialSpace) return;
+    previousInitialSpace.current = initialSpace;
     stop();
     setSpace(initialSpace);
     if (initialSpace === "draw") setGardenSeed(null);
-  }, [initialSpace, space, stop]);
+  }, [initialSpace, stop]);
 
   useEffect(() => {
     onSpaceChange?.(space);
