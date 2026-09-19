@@ -89,7 +89,10 @@ export function RootShell() {
           type="button"
           className={surface === "studio" ? "active" : ""}
           aria-current={surface === "studio" ? "page" : undefined}
-          onClick={() => (recent ? continueRecent() : startFresh())}
+          onClick={() => {
+            if (surface === "home") recent ? continueRecent() : startFresh();
+            else setSurface("studio");
+          }}
         >
           <Pencil size={23} />
           <span>{ja ? "スタジオ" : "Studio"}</span>
