@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
+import { RootShell } from "./RootShell";
 import { LanguageProvider } from "./i18n/LanguageContext";
 import { installPuchiMorph } from "./ui/puchiMorph";
 import "./styles.css";
@@ -12,7 +12,7 @@ import "./ui/puchi-notes.css";
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <LanguageProvider>
-      <App />
+      <RootShell />
     </LanguageProvider>
   </React.StrictMode>,
 );
