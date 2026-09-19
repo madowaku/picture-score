@@ -54,6 +54,7 @@ import { rememberWonder } from "./wonder/wonderMemory";
 import { WonderHint } from "./wonder/wonderHints";
 import { WonderDrawLayer } from "./wonder/WonderDrawLayer";
 import { strokeColor } from "./wonder/palette";
+import { BrandSymbol } from "./brand/BrandLogo";
 
 type HistoryFrame = Pick<Project, "title" | "strokes" | "canvasAspect">;
 const IDEA_SETS = [
@@ -139,9 +140,16 @@ function CatIcon() {
   );
 }
 
-export default function App() {
+type AppSpace = "draw" | "garden";
+
+type AppProps = {
+  initialSpace?: AppSpace;
+  onSpaceChange?: (space: AppSpace) => void;
+};
+
+export default function App({ initialSpace = "draw", onSpaceChange }: AppProps = {}) {
   const { language, t } = useLanguage();
-  const [space, setSpace] = useState<"draw" | "garden">("draw");
+  const [space, setSpace] = useState<AppSpace>(initialSpace);
   const [gardenSeed, setGardenSeed] = useState<Project | null>(null);
   const [project, setProject] = useState<Project>(loadProject);
   const projectRef = useRef(project);
@@ -215,6 +223,25 @@ export default function App() {
     setFinished(false);
     setAnsweringStroke(null);
     clearTimeout(finishTimer.current);
+  }, []);
+
+  useEffect(() => {
+    if (space === initialSpace) return;
+    stop();
+    setSpace(initialSpace);
+    if (initialSpace === "draw") setGardenSeed(null);
+  }, [initialSpace, space, stop]);
+
+  useEffect(() => {
+    onSpaceChange?.(space);
+  }, [space, onSpaceChange]);
+
+  useEffect(() => () => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projectRef.current));
+    } catch {
+      // Autosave errors are already surfaced while Studio is mounted.
+    }
   }, []);
   const notes = useMemo(
     () => createVisualNotes(project.strokes, project.magnet),
@@ -680,7 +707,7 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="./" aria-label={t("Picture Score ホーム")}>
-          <Logo />
+          <BrandSymbol compact />
           <span>
             picture score<span className="brand-dot">.</span>
           </span>
