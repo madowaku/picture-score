@@ -45,6 +45,7 @@ import {
   STORAGE_KEY,
 } from "./music/project";
 import type { Project, Stroke, StrokePoint } from "./music/types";
+import { renderStroke, type StrokeRenderMode } from "./drawing/renderStroke";
 import { GardenView } from "./garden/GardenView";
 import { LanguageSwitch, useLanguage } from "./i18n/LanguageContext";
 import { tactileTick } from "./ui/feedback";
@@ -61,10 +62,6 @@ const IDEA_SETS = [
   ["ぐるぐる", "ギザギザ", "名前"],
   ["縦線", "横線", "顔"],
 ] as const;
-const pathFor = (stroke: Stroke) =>
-  stroke.points
-    .map((p, i) => `${i ? "L" : "M"}${p.x.toFixed(2)},${p.y.toFixed(2)}`)
-    .join(" ") + (stroke.points.length === 1 ? "l0.1,0" : "");
 const formatTime = (seconds: number) =>
   `0:${Math.floor(seconds).toString().padStart(2, "0")}`;
 type GestureKind = "dot" | "sustain" | "chord" | "legato" | "staccato" | "rich";
@@ -146,6 +143,7 @@ export default function App() {
   const [project, setProject] = useState<Project>(loadProject);
   const projectRef = useRef(project);
   const [tool, setTool] = useState<"draw" | "erase">("draw");
+  const [inkMode, setInkMode] = useState<StrokeRenderMode>("current");
   const [draft, setDraft] = useState<Stroke | null>(null);
   const draftRef = useRef<Stroke | null>(null);
   const draftPathRef = useRef<SVGPathElement>(null);
@@ -221,6 +219,14 @@ export default function App() {
     [project.strokes, project.magnet],
   );
   const noteColors = useMemo(() => new Map(project.strokes.map((stroke, index) => [stroke.id, strokeColor(index)])), [project.strokes]);
+  const renderedStrokes = useMemo(
+    () => project.strokes.map((stroke, index) => ({
+      stroke,
+      rendered: renderStroke(stroke, inkMode),
+      color: strokeColor(index),
+    })),
+    [project.strokes, inkMode],
+  );
   const wonderEffects = useMemo(() => drawRelations(project.strokes), [project.strokes]);
   const music = useMemo(
     () =>
@@ -498,7 +504,7 @@ export default function App() {
     const stroke = { id: globalThis.crypto?.randomUUID?.() ??
       "stroke-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2), points: [p] };
     draftRef.current = stroke;
-    draftPath.current = pathFor(stroke);
+    draftPath.current = renderStroke(stroke, inkMode).d;
     setDraft({ ...stroke, points: [...stroke.points] });
     void engine.current
       .unlock()
@@ -537,12 +543,21 @@ export default function App() {
         break;
       }
       current.points.push(p);
-      draftPath.current += " L" + p.x.toFixed(2) + "," + p.y.toFixed(2);
+      if (inkMode === "current")
+        draftPath.current += " L" + p.x.toFixed(2) + "," + p.y.toFixed(2);
     }
     if (!draftFrame.current) {
       // Ink updates once per display frame without reconciling every saved note.
       draftFrame.current = requestAnimationFrame(() => {
-        draftPathRef.current?.setAttribute("d", draftPath.current);
+        const liveDraft = draftRef.current;
+        const path = draftPathRef.current;
+        if (liveDraft && path) {
+          const rendered = inkMode === "current"
+            ? { kind: "centerline" as const, d: draftPath.current }
+            : renderStroke(liveDraft, inkMode);
+          path.setAttribute("d", rendered.d);
+          path.dataset.inkKind = rendered.kind;
+        }
         draftFrame.current = 0;
       });
     }
@@ -882,6 +897,21 @@ export default function App() {
             </div>
           </div>
           <div ref={areaRef} className={`drawing-area tool-${tool}`}>
+            {new URLSearchParams(window.location.search).has("inklab") && (
+              <div className="ink-lab-switch" role="group" aria-label="INK LAB renderer">
+                <span>INK LAB</span>
+                {(["current", "streamlined", "freehand"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    aria-pressed={inkMode === mode}
+                    onClick={() => setInkMode(mode)}
+                  >
+                    {{ current: "RAW", streamlined: "SMOOTH", freehand: "INK" }[mode]}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="pitch-hint high">{t("HIGH")}</div>
             <div className="pitch-hint low">{t("LOW")}</div>
             <svg
@@ -932,12 +962,31 @@ export default function App() {
                 ))}
               </g>
               <g className="source-strokes">
-                {project.strokes.map((s, index) => (
-                  <path key={s.id} d={pathFor(s)} data-stroke={s.id} style={{ stroke: strokeColor(index) }} />
+                {renderedStrokes.map(({ stroke, rendered, color }) => (
+                  <path
+                    key={stroke.id}
+                    d={rendered.d}
+                    data-stroke={stroke.id}
+                    data-ink-kind={rendered.kind}
+                    style={rendered.kind === "outline"
+                      ? { fill: color, stroke: "none" }
+                      : { fill: "none", stroke: color }}
+                  />
                 ))}
               </g>
               <WonderDrawLayer effects={wonderEffects} strokes={project.strokes} recent={wonderStroke} beat={playing ? progress * BEATS : undefined} />
-              {draft && <path ref={draftPathRef} className="draft-stroke" d={pathFor(draft)} />}
+              {draft && (() => {
+                const rendered = renderStroke(draft, inkMode);
+                return <path
+                  ref={draftPathRef}
+                  className="draft-stroke"
+                  d={rendered.d}
+                  data-ink-kind={rendered.kind}
+                  style={rendered.kind === "outline"
+                    ? { fill: "#cd553c", stroke: "none" }
+                    : undefined}
+                />;
+              })()}
               <g className="score-notes">
                 {notes.map((n) => {
                   const active = activeSources.has(n.id);
