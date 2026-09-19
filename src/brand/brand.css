@@ -1,0 +1,53 @@
+.brand-symbol {
+  display: block;
+  width: 92px;
+  height: 92px;
+  flex: 0 0 auto;
+}
+.brand-symbol.compact {
+  width: 36px;
+  height: 36px;
+}
+.official-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  color: #42513f;
+}
+.official-brand.compact { gap: 8px; }
+.official-brand-type {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+.official-wordmark {
+  font-size: clamp(24px, 4vw, 44px);
+  line-height: 1;
+  letter-spacing: .11em;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.official-brand.compact .official-wordmark {
+  font-size: 15px;
+  letter-spacing: .08em;
+}
+.official-dot { color: #db5c68; }
+.official-nickname {
+  margin-left: .13em;
+  font-size: 12px;
+  letter-spacing: .28em;
+  color: #71806c;
+}
+@media (max-width: 760px) {
+  .official-brand:not(.compact) {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .official-brand:not(.compact) .official-brand-type { align-items: center; }
+  .official-brand:not(.compact) .brand-symbol {
+    width: 104px;
+    height: 104px;
+  }
+  .official-brand:not(.compact) .official-wordmark { font-size: 27px; }
+}
