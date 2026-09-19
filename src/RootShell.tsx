@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Home, Pencil, Sprout } from "lucide-react";
 import App from "./App";
 import { HomeView } from "./home/HomeView";
@@ -52,6 +52,9 @@ export function RootShell() {
   }
 
   const appSpace: AppSpace = surface === "garden" ? "garden" : "draw";
+  const syncAppSpace = useCallback((space: AppSpace) => {
+    setSurface(space === "garden" ? "garden" : "studio");
+  }, []);
 
   return (
     <div className="product-root" data-surface={surface}>
@@ -65,12 +68,7 @@ export function RootShell() {
         />
       ) : (
         <div className="product-app-shell">
-          <App
-            initialSpace={appSpace}
-            onSpaceChange={(space) =>
-              setSurface(space === "garden" ? "garden" : "studio")
-            }
-          />
+          <App initialSpace={appSpace} onSpaceChange={syncAppSpace} />
         </div>
       )}
 
