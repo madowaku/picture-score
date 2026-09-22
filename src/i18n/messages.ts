@@ -3,6 +3,20 @@ export const LANGUAGE_KEY = "picture-score:language";
 
 // Source copy is the message key; artwork titles and musical IDs never pass through this dictionary.
 export const messages: Record<string, Record<Language, string>> = {
+  "RECORDING YOUR LITTLE COMPOSITION": { ja: "短い演奏を録画中", en: "RECORDING YOUR LITTLE COMPOSITION" },
+  "短い演奏を録画": { ja: "短い演奏を録画", en: "Record a short performance" },
+  "短い演奏を録画中": { ja: "短い演奏を録画中", en: "Recording a short performance" },
+  "短尺RECを終了": { ja: "短尺RECを終了", en: "Finish short recording" },
+  "短尺RECの進み具合": { ja: "短尺RECの進み具合", en: "Short recording progress" },
+  "短尺RECプレビュー": { ja: "短尺RECプレビュー", en: "Short recording preview" },
+  "音と絵をひとつの短い動画に。": { ja: "音と絵をひとつの短い動画に。", en: "Turn sound and drawing into one short video." },
+  "録画を閉じる": { ja: "録画を閉じる", en: "Close recording" },
+  "動画を保存": { ja: "動画を保存", en: "Save video" },
+  "撮り直す": { ja: "撮り直す", en: "Record again" },
+  "最大15秒。編集UIは映さず、作品だけを記録します。": { ja: "最大15秒。編集UIは映さず、作品だけを記録します。", en: "Up to 15 seconds. Only the artwork is captured, without editing UI." },
+  "短い演奏を録画しました。": { ja: "短い演奏を録画しました。", en: "Recorded a short performance." },
+  "録画できませんでした。もう一度RECを押してください。": { ja: "録画できませんでした。もう一度RECを押してください。", en: "Couldn’t record the video. Press REC and try again." },
+  "このブラウザでは短尺RECを使えません。Android / desktop Chromeでお試しください。": { ja: "このブラウザでは短尺RECを使えません。Android / desktop Chromeでお試しください。", en: "Short REC isn’t available in this browser. Try Android or desktop Chrome." },
   "Your drawings don’t sit there. They live there.": { ja: "描いた絵が、ここで息づく。", en: "Your drawings don’t sit there. They live there." },
   "庭に置く": { ja: "庭に置く", en: "Plant your song" },
   "Every shape hides a musical secret.": { ja: "かたちの中に、音のひみつ。", en: "Every shape hides a musical secret." },
