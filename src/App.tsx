@@ -6,7 +6,9 @@ import {
   AudioLines,
   Check,
   ChevronDown,
+  Circle,
   CircleHelp,
+  Download,
   Eraser,
   FileJson,
   FolderOpen,
@@ -17,6 +19,7 @@ import {
   Pencil,
   Play,
   Redo2,
+  RefreshCw,
   RotateCcw,
   Sparkles,
   Square,
@@ -45,6 +48,13 @@ import {
   STORAGE_KEY,
 } from "./music/project";
 import type { Project, Stroke, StrokePoint } from "./music/types";
+import {
+  createShortRecordingRenderer,
+  preferredShortRecordingMimeType,
+  SHORT_RECORDING_FPS,
+  shortRecordingDurationSeconds,
+  supportsShortRecording,
+} from "./recording/shortRecording";
 import { GardenView } from "./garden/GardenView";
 import { LanguageSwitch, useLanguage } from "./i18n/LanguageContext";
 import { tactileTick } from "./ui/feedback";
@@ -178,10 +188,18 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
   const [exportOpen, setExportOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recordingProgress, setRecordingProgress] = useState(0);
+  const [recordingBlob, setRecordingBlob] = useState<Blob | null>(null);
+  const [recordingUrl, setRecordingUrl] = useState("");
+  const [recordingPreviewOpen, setRecordingPreviewOpen] = useState(false);
   const [notice, setNotice] = useState<string | { key: string; format?: string; idea?: string }>("");
   const [saved, setSaved] = useState(true);
   const [saveFailed, setSaveFailed] = useState(false);
   const engine = useRef(new AudioEngine());
+  const recordingGeneration = useRef(0);
+  const cancelRecordingRef = useRef<(() => void) | null>(null);
+  const finishRecordingRef = useRef<(() => void) | null>(null);
   const animation = useRef(0),
     playGeneration = useRef(0);
   const finishTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -211,6 +229,10 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
     refreshHistory((n) => n + 1);
   }, []);
   const stop = useCallback(() => {
+    const cancelRecording = cancelRecordingRef.current;
+    cancelRecordingRef.current = null;
+    finishRecordingRef.current = null;
+    cancelRecording?.();
     playGeneration.current++;
     answerGeneration.current++;
     cancelAnimationFrame(animation.current);
@@ -245,6 +267,10 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
       // Autosave errors are already surfaced while Studio is mounted.
     }
   }, []);
+  useEffect(() => () => {
+    if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+  }, [recordingUrl]);
+
   const notes = useMemo(
     () => createVisualNotes(project.strokes, project.magnet),
     [project.strokes, project.magnet],
@@ -257,6 +283,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
     [notes, project.tempo, project.accompaniment, project.magnet, wonderEffects],
   );
   const seconds = (BEATS * 60) / project.tempo;
+  const recordingSeconds = shortRecordingDurationSeconds(music);
   const playAnchors = useMemo(
     () => new Set(music.playNotes.map((n) => n.anchorId)),
     [music.playNotes],
@@ -387,6 +414,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
   }, [stop, update]);
 
   const play = useCallback(async () => {
+    if (recording) return;
     if (playing || starting) {
       stop();
       return;
@@ -431,7 +459,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
       stop();
       setNotice("音を開始できませんでした。もう一度PLAYを押してください。");
     }
-  }, [playing, starting, notes.length, stop, music, project.instrument, wonderEffects]);
+  }, [playing, starting, recording, notes.length, stop, music, project.instrument, wonderEffects]);
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -484,6 +512,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
   }
   function beginStroke(event: ReactPointerEvent<SVGSVGElement>) {
     if (
+      recording ||
       pointer.current !== null ||
       (event.pointerType === "mouse" && event.button !== 0)
     )
@@ -678,8 +707,167 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
     setTool("draw");
     setNotice("新しい一枚。Undoで前の絵に戻せます。");
   }
+  async function startShortRecording() {
+    if (recording || exporting || !notes.length) return;
+    if (!supportsShortRecording()) {
+      setNotice("このブラウザでは短尺RECを使えません。Android / desktop Chromeでお試しください。");
+      return;
+    }
+
+    stop();
+    setRecordingUrl("");
+    setRecordingBlob(null);
+    setRecordingPreviewOpen(false);
+    setRecording(true);
+    setRecordingProgress(0);
+    setFinished(false);
+
+    const generation = ++recordingGeneration.current;
+    let recorder: MediaRecorder | null = null;
+    let renderer: ReturnType<typeof createShortRecordingRenderer> | null = null;
+    let combinedStream: MediaStream | null = null;
+    let frameId = 0;
+    let lastVideoFrame = -Infinity;
+    let cancelled = false;
+
+    try {
+      const audioStream = await engine.current.captureStream();
+      if (generation !== recordingGeneration.current) return;
+
+      renderer = createShortRecordingRenderer({
+        project: structuredClone(projectRef.current),
+        notes,
+        music,
+      });
+      renderer.draw(0);
+
+      combinedStream = new MediaStream([
+        ...renderer.stream.getVideoTracks(),
+        ...audioStream.getAudioTracks(),
+      ]);
+      const mimeType = preferredShortRecordingMimeType();
+      const mediaRecorder = mimeType
+        ? new MediaRecorder(combinedStream, {
+            mimeType,
+            videoBitsPerSecond: 2_800_000,
+          })
+        : new MediaRecorder(combinedStream, {
+            videoBitsPerSecond: 2_800_000,
+          });
+      recorder = mediaRecorder;
+
+      const chunks: BlobPart[] = [];
+      const finishedRecording = new Promise<Blob | null>((resolve, reject) => {
+        mediaRecorder.ondataavailable = (event) => {
+          if (event.data.size) chunks.push(event.data);
+        };
+        mediaRecorder.onerror = () => reject(new Error("MediaRecorder failed"));
+        mediaRecorder.onstop = () =>
+          resolve(
+            cancelled
+              ? null
+              : new Blob(chunks, {
+                  type: mediaRecorder.mimeType || mimeType || "video/webm",
+                }),
+          );
+      });
+
+      const stopRecorder = () => {
+        cancelAnimationFrame(frameId);
+        if (mediaRecorder.state !== "inactive") mediaRecorder.stop();
+      };
+      cancelRecordingRef.current = () => {
+        cancelled = true;
+        recordingGeneration.current++;
+        setRecording(false);
+        setRecordingProgress(0);
+        stopRecorder();
+      };
+      finishRecordingRef.current = stopRecorder;
+
+      mediaRecorder.start(250);
+      const timing = await engine.current.play(
+        music,
+        projectRef.current.instrument,
+      );
+
+      if (
+        generation === recordingGeneration.current &&
+        !cancelled &&
+        mediaRecorder.state !== "inactive"
+      ) {
+        setPlaying(true);
+        rememberWonder(wonderEffects.map((effect) => effect.rule));
+        const frame = () => {
+          const elapsed = Math.max(
+            0,
+            engine.current.currentTime - timing.start,
+          );
+          const compositionProgress = Math.min(
+            1,
+            elapsed / Math.max(0.001, timing.seconds),
+          );
+          setProgress(compositionProgress);
+          setRecordingProgress(Math.min(1, elapsed / recordingSeconds));
+
+          if (elapsed - lastVideoFrame >= 1 / SHORT_RECORDING_FPS) {
+            renderer!.draw(compositionProgress);
+            lastVideoFrame = elapsed;
+          }
+
+          if (elapsed >= recordingSeconds || elapsed >= timing.seconds) {
+            renderer!.draw(compositionProgress);
+            stopRecorder();
+            return;
+          }
+          frameId = requestAnimationFrame(frame);
+        };
+        frameId = requestAnimationFrame(frame);
+      } else {
+        engine.current.stop();
+        stopRecorder();
+      }
+
+      const blob = await finishedRecording;
+      if (
+        generation !== recordingGeneration.current ||
+        cancelled ||
+        !blob ||
+        !blob.size
+      )
+        return;
+
+      setRecordingBlob(blob);
+      setRecordingUrl(URL.createObjectURL(blob));
+      setRecordingPreviewOpen(true);
+      setNotice("短い演奏を録画しました。");
+    } catch {
+      if (generation === recordingGeneration.current)
+        setNotice("録画できませんでした。もう一度RECを押してください。");
+    } finally {
+      cancelAnimationFrame(frameId);
+      if (recorder && recorder.state !== "inactive") {
+        cancelled = true;
+        recorder.stop();
+      }
+      renderer?.dispose();
+      combinedStream?.getTracks().forEach((track) => track.stop());
+      engine.current.stop();
+      engine.current.releaseCaptureStream();
+      if (generation === recordingGeneration.current) {
+        cancelRecordingRef.current = null;
+        finishRecordingRef.current = null;
+        setRecording(false);
+        setRecordingProgress(0);
+      }
+      setPlaying(false);
+      setStarting(false);
+      setProgress(0);
+    }
+  }
+
   async function exportWork(kind: "png" | "wav" | "mid" | "json") {
-    if (exporting) return;
+    if (exporting || recording) return;
     setExporting(true);
     stop();
     try {
@@ -743,7 +931,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
             className="icon-button undo-button"
             aria-label={t("Undo — 元に戻す")}
             title="Undo (Ctrl/⌘ Z)"
-            disabled={!history.current.length}
+            disabled={!history.current.length || recording}
             onClick={undo}
           >
             <Undo2 size={18} />
@@ -753,7 +941,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
             className="icon-button redo-button"
             aria-label={t("Redo — やり直す")}
             title="Redo (Ctrl/⌘ Shift Z)"
-            disabled={!future.current.length}
+            disabled={!future.current.length || recording}
             onClick={redo}
           >
             <Redo2 size={17} />
@@ -764,6 +952,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               className={`save-button ${exportOpen ? "open" : ""}`}
               aria-label={t("作品を書き出す")}
               aria-expanded={exportOpen}
+              disabled={recording}
               onClick={() => setExportOpen((v) => !v)}
             >
               {exporting ? (
@@ -879,15 +1068,17 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
         </ol>
 
         <section
-          className={`score-paper ${finished ? "finished" : ""} ${playing ? "is-playing" : ""} ${answeringStroke ? "is-answering" : ""}`}
+          className={`score-paper ${finished ? "finished" : ""} ${playing ? "is-playing" : ""} ${recording ? "is-recording" : ""} ${answeringStroke ? "is-answering" : ""}`}
           aria-label={t("楽譜キャンバス")}
         >
           <div className="paper-heading">
             <div className="paper-label">
               <span className={`status-dot ${playing ? "pulse" : ""}`} />
               <span>
-                {playing
-                  ? t("YOUR DRAWING IS PLAYING")
+                {recording
+                  ? t("RECORDING YOUR LITTLE COMPOSITION")
+                  : playing
+                    ? t("YOUR DRAWING IS PLAYING")
                   : draft
                     ? t("FOLLOW YOUR LINE")
                   : answeringStroke
@@ -903,7 +1094,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 className="icon-button new-page"
                 aria-label={t("新しいキャンバス")}
                 title={t("新しいキャンバス（Undoで復元できます）")}
-                disabled={!project.strokes.length}
+                disabled={!project.strokes.length || recording}
                 onClick={clearCanvas}
               >
                 <RotateCcw size={14} />
@@ -1086,6 +1277,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 className={tool === "draw" ? "selected" : ""}
                 aria-pressed={tool === "draw"}
                 aria-label={t("DRAW — 描く")}
+                disabled={recording}
                 onClick={() => setTool("draw")}
               >
                 <Pencil size={17} />
@@ -1095,6 +1287,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 className={tool === "erase" ? "selected" : ""}
                 aria-pressed={tool === "erase"}
                 aria-label={t("ERASE — 線を消す")}
+                disabled={recording}
                 onClick={() => setTool("erase")}
               >
                 <Eraser size={17} />
@@ -1108,29 +1301,62 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
             </span>
           </div>
           <div className="play-control">
-            <button
-              className={`play-button ${playing ? "playing" : ""}`}
-              disabled={!notes.length || exporting}
-              aria-label={
-                playing || starting
-                  ? t("STOP — 再生を止める")
-                  : t("PLAY — 絵を演奏する")
-              }
-              onClick={() => void play()}
-            >
-              {starting ? (
-                <LoaderCircle className="spin" size={18} />
-              ) : playing ? (
-                <Square size={15} fill="currentColor" />
-              ) : (
-                <Play size={18} fill="currentColor" />
-              )}
-              <span>{playing || starting ? "STOP" : "PLAY"}</span>
-            </button>
+            <div className="transport-buttons">
+              <button
+                className={`play-button ${playing && !recording ? "playing" : ""}`}
+                disabled={!notes.length || exporting || recording}
+                aria-label={
+                  playing || starting
+                    ? t("STOP — 再生を止める")
+                    : t("PLAY — 絵を演奏する")
+                }
+                onClick={() => void play()}
+              >
+                {starting ? (
+                  <LoaderCircle className="spin" size={18} />
+                ) : playing && !recording ? (
+                  <Square size={15} fill="currentColor" />
+                ) : (
+                  <Play size={18} fill="currentColor" />
+                )}
+                <span>{(playing && !recording) || starting ? "STOP" : "PLAY"}</span>
+              </button>
+              <button
+                className={`rec-button ${recording ? "recording" : ""}`}
+                disabled={!recording && (!notes.length || exporting || starting)}
+                aria-label={
+                  recording ? t("短尺RECを終了") : t("短い演奏を録画")
+                }
+                onClick={() =>
+                  recording
+                    ? finishRecordingRef.current?.()
+                    : void startShortRecording()
+                }
+              >
+                <Circle size={14} fill={recording ? "currentColor" : "none"} />
+                <span>{recording ? "STOP" : "REC"}</span>
+              </button>
+            </div>
             <span className="control-hint">
-              {playing ? t("あなたの絵を、演奏中") : t("描いたら、聴いてみよう")}
+              {recording
+                ? t("短い演奏を録画中")
+                : playing
+                  ? t("あなたの絵を、演奏中")
+                  : t("描いたら、聴いてみよう")}
             </span>
-            <button className="place-garden" disabled={!notes.length || exporting || !!draft}
+            {recording && (
+              <div
+                className="recording-meter"
+                role="progressbar"
+                aria-label={t("短尺RECの進み具合")}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.round(recordingProgress * 100)}
+              >
+                <span style={{ width: `${recordingProgress * 100}%` }} />
+              </div>
+            )}
+            <button className="place-garden" disabled={!notes.length || exporting || recording || !!draft}
               onClick={() => { stop(); setGardenSeed(structuredClone(projectRef.current)); setSpace("garden"); }}>
               <Music2 size={14} /> {t("PLACE IN GARDEN")}
             </button>
@@ -1149,6 +1375,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               <input
                 id="magnet"
                 type="range"
+                disabled={recording}
                 min="0"
                 max="100"
                 value={Math.round(project.magnet * 100)}
@@ -1195,6 +1422,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                   key={instrument}
                   className={project.instrument === instrument ? "active" : ""}
                   aria-pressed={project.instrument === instrument}
+                  disabled={recording}
                   onClick={() => {
                     stop();
                     update({ instrument });
@@ -1214,6 +1442,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               <input
                 type="checkbox"
                 checked={project.accompaniment}
+                disabled={recording}
                 onChange={(e) => {
                   stop();
                   update({ accompaniment: e.target.checked });
@@ -1228,6 +1457,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               <select
                 aria-label={t("テンポ")}
                 value={project.tempo}
+                disabled={recording}
                 onChange={(e) => {
                   stop();
                   update({ tempo: Number(e.target.value) });
@@ -1269,6 +1499,67 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
           <CircleHelp size={14} /> {t("あそびかた")}
         </button>
       </footer>
+      {recordingPreviewOpen && recordingUrl && recordingBlob && (
+        <div
+          className="recording-preview-backdrop"
+          role="presentation"
+          onPointerDown={(event) => {
+            if (event.target === event.currentTarget)
+              setRecordingPreviewOpen(false);
+          }}
+        >
+          <section
+            className="recording-preview"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("短尺RECプレビュー")}
+          >
+            <div className="recording-preview-heading">
+              <div>
+                <span>SHORT REC</span>
+                <strong>{t("音と絵をひとつの短い動画に。")}</strong>
+              </div>
+              <button
+                className="icon-button"
+                aria-label={t("録画を閉じる")}
+                onClick={() => setRecordingPreviewOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <video
+              src={recordingUrl}
+              controls
+              loop
+              playsInline
+              preload="metadata"
+            />
+            <div className="recording-preview-actions">
+              <button
+                className="recording-save"
+                onClick={() =>
+                  download(
+                    recordingBlob,
+                    project.title,
+                    recordingBlob.type.includes("mp4") ? "mp4" : "webm",
+                  )
+                }
+              >
+                <Download size={16} /> {t("動画を保存")}
+              </button>
+              <button
+                onClick={() => {
+                  setRecordingPreviewOpen(false);
+                  void startShortRecording();
+                }}
+              >
+                <RefreshCw size={15} /> {t("撮り直す")}
+              </button>
+            </div>
+            <p>{t("最大15秒。編集UIは映さず、作品だけを記録します。")}</p>
+          </section>
+        </div>
+      )}
       {notice && (
         <div className="toast" role="status">
           <Check size={16} />

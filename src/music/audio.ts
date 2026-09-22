@@ -130,6 +130,7 @@ export class AudioEngine {
   private settleBuffer?: AudioBuffer;
   private settleLoading?: Promise<void>;
   private uiVoices = new Set<OscillatorNode>();
+  private captureDestination?: MediaStreamAudioDestinationNode;
   async unlock() {
     if (!this.ctx) {
       this.ctx = new AudioContext();
@@ -280,6 +281,24 @@ export class AudioEngine {
     schedule();
     this.timer = setInterval(schedule, 25);
     return { start, seconds: music.lengthBeats * secondsPerBeat };
+  }
+  async captureStream(): Promise<MediaStream> {
+    await this.unlock();
+    if (!this.captureDestination) {
+      this.captureDestination = this.ctx!.createMediaStreamDestination();
+      this.bus!.connect(this.captureDestination);
+    }
+    return this.captureDestination.stream;
+  }
+  releaseCaptureStream() {
+    if (!this.captureDestination) return;
+    try {
+      this.bus?.disconnect(this.captureDestination);
+    } catch {
+      // It may already be disconnected while a recorder is shutting down.
+    }
+    this.captureDestination.stream.getTracks().forEach((track) => track.stop());
+    this.captureDestination = undefined;
   }
   get currentTime() {
     return this.ctx?.currentTime ?? 0;
