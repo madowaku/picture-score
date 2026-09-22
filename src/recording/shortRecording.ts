@@ -303,7 +303,7 @@ export function createShortRecordingRenderer(input: {
     ctx.fillText("DRAW  •  LISTEN  •  SHARE", width / 2, height - 86);
     ctx.font = "500 12px sans-serif";
     ctx.fillStyle = "#a0a296";
-    ctx.fillText("picture-score.netlify.app", width / 2, height - 55);
+    ctx.fillText("made with picture score.", width / 2, height - 55);
     ctx.restore();
   };
 

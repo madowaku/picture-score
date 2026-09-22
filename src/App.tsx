@@ -931,7 +931,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
             className="icon-button undo-button"
             aria-label={t("Undo — 元に戻す")}
             title="Undo (Ctrl/⌘ Z)"
-            disabled={!history.current.length}
+            disabled={!history.current.length || recording}
             onClick={undo}
           >
             <Undo2 size={18} />
@@ -941,7 +941,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
             className="icon-button redo-button"
             aria-label={t("Redo — やり直す")}
             title="Redo (Ctrl/⌘ Shift Z)"
-            disabled={!future.current.length}
+            disabled={!future.current.length || recording}
             onClick={redo}
           >
             <Redo2 size={17} />
@@ -952,6 +952,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               className={`save-button ${exportOpen ? "open" : ""}`}
               aria-label={t("作品を書き出す")}
               aria-expanded={exportOpen}
+              disabled={recording}
               onClick={() => setExportOpen((v) => !v)}
             >
               {exporting ? (
@@ -1093,7 +1094,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 className="icon-button new-page"
                 aria-label={t("新しいキャンバス")}
                 title={t("新しいキャンバス（Undoで復元できます）")}
-                disabled={!project.strokes.length}
+                disabled={!project.strokes.length || recording}
                 onClick={clearCanvas}
               >
                 <RotateCcw size={14} />
@@ -1276,6 +1277,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 className={tool === "draw" ? "selected" : ""}
                 aria-pressed={tool === "draw"}
                 aria-label={t("DRAW — 描く")}
+                disabled={recording}
                 onClick={() => setTool("draw")}
               >
                 <Pencil size={17} />
@@ -1285,6 +1287,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 className={tool === "erase" ? "selected" : ""}
                 aria-pressed={tool === "erase"}
                 aria-label={t("ERASE — 線を消す")}
+                disabled={recording}
                 onClick={() => setTool("erase")}
               >
                 <Eraser size={17} />
@@ -1372,6 +1375,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               <input
                 id="magnet"
                 type="range"
+                disabled={recording}
                 min="0"
                 max="100"
                 value={Math.round(project.magnet * 100)}
@@ -1418,6 +1422,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                   key={instrument}
                   className={project.instrument === instrument ? "active" : ""}
                   aria-pressed={project.instrument === instrument}
+                  disabled={recording}
                   onClick={() => {
                     stop();
                     update({ instrument });
@@ -1437,6 +1442,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               <input
                 type="checkbox"
                 checked={project.accompaniment}
+                disabled={recording}
                 onChange={(e) => {
                   stop();
                   update({ accompaniment: e.target.checked });
@@ -1451,6 +1457,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               <select
                 aria-label={t("テンポ")}
                 value={project.tempo}
+                disabled={recording}
                 onChange={(e) => {
                   stop();
                   update({ tempo: Number(e.target.value) });
