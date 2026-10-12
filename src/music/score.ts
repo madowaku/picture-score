@@ -3,9 +3,9 @@ import type {
   ScoreNote,
   Stroke,
   StrokePoint,
-  SupportNote,
 } from "./types";
 import { createPlayNotes } from "./interpret";
+import { createHarmonySupport } from "./harmony";
 
 export const WIDTH = 1000;
 export const HEIGHT = 420;
@@ -118,7 +118,7 @@ export function createVisualNotes(strokes: Stroke[], strength: number): ScoreNot
 // Compatibility name: this is the visual layer, never a playlist.
 export const createScore = createVisualNotes;
 
-/** Accompaniment follows occupied bars. It never alters the drawing notes. */
+/** Accompaniment supports the drawing voice without altering it. */
 export function createMusic(
   drawing: ScoreNote[],
   tempo: number,
@@ -126,39 +126,9 @@ export function createMusic(
   magnet: number,
 ): MusicIR {
   const playNotes = createPlayNotes(drawing, magnet);
-  const support: SupportNote[] = [];
-  if (accompaniment && playNotes.length && magnet > 0) {
-    const chords = [
-      [48, 55, 64],
-      [45, 52, 60],
-      [41, 48, 57],
-      [43, 50, 57],
-    ];
-    for (let bar = 0; bar < 4; bar++) {
-      const inBar = playNotes.filter(
-        (n) => n.beat < bar * 4 + 4 && n.beat + n.duration > bar * 4,
-      );
-      if (!inBar.length) continue;
-      const chord = [...chords].sort((a, b) => {
-        const fitness = (c: number[]) =>
-          inBar.reduce(
-            (sum, n) => sum + (c.some((p) => p % 12 === n.pitch % 12)
-              ? Math.min(n.beat + n.duration, bar * 4 + 4) - Math.max(n.beat, bar * 4) : 0),
-            0,
-          );
-        return fitness(b) - fitness(a);
-      })[0];
-      const start = Math.max(bar * 4, inBar[0].beat);
-      chord.forEach((pitch, i) =>
-        support.push({
-          pitch,
-          beat: start,
-          duration: Math.min(3.7, BEATS - start),
-          velocity: (i ? 0.1 : 0.15) * clamp(magnet, 0, 1),
-        }),
-      );
-    }
-  }
+  const support = accompaniment
+    ? createHarmonySupport(drawing, playNotes, magnet, BEATS)
+    : [];
   return {
     key: "C",
     scale: "major-pentatonic",
