@@ -268,7 +268,11 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
       catch { /* the on-screen save error is handled by the debounced writer */ }
     };
     window.addEventListener("pagehide", flush);
-    return () => window.removeEventListener("pagehide", flush);
+    return () => {
+      // In-app navigation unmounts Garden without firing pagehide; persist the latest state.
+      flush();
+      window.removeEventListener("pagehide", flush);
+    };
   }, []);
   useEffect(() => {
     const off = life.current.observe(event => {
