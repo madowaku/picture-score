@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
-import { ArrowRight, CircleHelp, Music2, Pencil, Play, Settings, Sprout } from "lucide-react";
+import { ArrowRight, CircleHelp, FileText, Music2, Pencil, Settings, Sprout } from "lucide-react";
 import type { Project, Stroke } from "../music/types";
 import { useLanguage } from "../i18n/LanguageContext";
-import { strokeColor } from "../wonder/palette";
+import { strokeInk, strokeWidth } from "../wonder/palette";
 import { BrandLogo } from "../brand/BrandLogo";
 import "./home.css";
 
@@ -36,10 +36,10 @@ export function HomeView({
         <span className="home-wash wash-a" />
         <span className="home-wash wash-b" />
         <span className="home-wash wash-c" />
-        <span className="home-botanical botanical-a"><Sprout /></span>
-        <span className="home-botanical botanical-b"><Sprout /></span>
-        <span className="home-floating-note note-a"><Music2 /></span>
-        <span className="home-floating-note note-b"><Music2 /></span>
+        <img className="home-botanical botanical-a" src="/art/clearing-sprout.webp" alt="" />
+        <img className="home-botanical botanical-b" src="/art/clearing-sprout.webp" alt="" />
+        <img className="home-floating-note note-a" src="/art/clearing-flower.webp" alt="" />
+        <img className="home-floating-note note-b" src="/art/clearing-flower.webp" alt="" />
       </div>
 
       <section className="home-hero">
@@ -85,6 +85,10 @@ export function HomeView({
 
         <p className="home-copy">{ja ? "小さな絵に、小さな魔法。" : "A little drawing. A little magic."}</p>
 
+        <div className="home-cat" aria-hidden="true">
+          <svg viewBox="0 0 150 65"><path d="M18 36 16 14l13 8 13-8 1 24c-6 9-22 9-27-1Zm25 0c23-16 55-5 61 18H88l-1-9-9 1-1 9H64l-1-9-10 1-1 8H41l3-12m59-6c21-1 29-18 19-23-7-3-9 7-3 8M24 32h1m10 0h1m-9 6 4 2 3-3M10 36l10 1m19-1 10-2" /></svg>
+          <span>a kinder day<br />with small creations.</span>
+        </div>
         <button className="home-primary" onClick={onStart}>
           <Pencil size={24} />
           <span>{ja ? "描いてみる" : "Start drawing"}</span>
@@ -95,7 +99,7 @@ export function HomeView({
       <section className="home-actions" aria-label={ja ? "行き先" : "Destinations"}>
         {recent && (
           <button className="home-action-card studio" onClick={onContinue}>
-            <Play size={20} />
+            <FileText size={20} />
             <span>
               <strong>{ja ? "続きを描く" : "Continue"}</strong>
               <small>{recent.title || (ja ? "名前のない作品" : "Untitled")}</small>
@@ -104,7 +108,7 @@ export function HomeView({
           </button>
         )}
         <button className="home-action-card garden" onClick={onGarden}>
-          <Sprout size={21} />
+          <img className="action-sprout" src="/art/clearing-sprout.webp" alt="" />
           <span>
             <strong>{ja ? "庭を見る" : "Visit Garden"}</strong>
             <small>{ja ? "描いた音たちが育つ場所" : "Where your sounds grow"}</small>
@@ -129,7 +133,7 @@ export function HomeView({
                 </g>
                 <g className="recent-strokes">
                   {recent.strokes.slice(0, 24).map((stroke, index) => (
-                    <path key={stroke.id} d={pathFor(stroke)} style={{ stroke: strokeColor(index) }} />
+                    <path key={stroke.id} d={pathFor(stroke)} style={{ stroke: strokeInk(stroke, index), strokeWidth: strokeWidth(stroke, 2.8), vectorEffect: "non-scaling-stroke" }} />
                   ))}
                 </g>
               </svg>
@@ -149,7 +153,7 @@ export function HomeView({
         <div className="home-how-heading"><span /><h2>{ja ? "はじめかた" : "How it works"}</h2><span /></div>
         <div className="home-steps">
           <div><span>1</span><Pencil size={26} /><strong>{ja ? "描く" : "Draw"}</strong><small>{ja ? "好きなように\n絵を描いてみよう" : "Draw anything\nyou like"}</small></div>
-          <div><span>2</span><Play size={26} /><strong>{ja ? "聴く" : "Listen"}</strong><small>{ja ? "描いた絵が\n音楽になります" : "Your drawing\nbecomes music"}</small></div>
+          <div><span>2</span><Music2 size={26} /><strong>{ja ? "聴く" : "Listen"}</strong><small>{ja ? "描いた絵が\n音楽になります" : "Your drawing\nbecomes music"}</small></div>
           <div><span>3</span><Sprout size={27} /><strong>{ja ? "庭に置く" : "Plant it"}</strong><small>{ja ? "できた曲を\nあなただけの庭に" : "Place your song\nin your garden"}</small></div>
         </div>
         <p className="home-gentle-line">{ja ? "小さな創造で、やさしい一日を。" : "A kinder day with small creations."}</p>

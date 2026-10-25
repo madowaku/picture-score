@@ -18,3 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 );
 
 installPuchiMorph();
+
+import './watercolor-theme.css';
+
+import "./ui/creation.css";
