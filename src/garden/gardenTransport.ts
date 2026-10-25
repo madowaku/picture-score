@@ -1,4 +1,4 @@
-import { outputBus, voice } from "../music/audio";
+import { outputBus, releaseVoices, voice } from "../music/audio";
 import type { GardenState, MusicalObject } from "./gardenState";
 import { mixGarden } from "./gardenMixer";
 import { buildEnsemblePlan, independentNotes, proximityStrength } from "./ensemble";
@@ -89,8 +89,7 @@ export class GardenTransport {
     const ids = new Set(state.objects.map((o) => o.id));
     for (const [id, lane] of this.lanes) if (!ids.has(id)) {
       this.life.remove(id);
-      this.clearVoices(lane);
-      lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect();
+      this.retireLane(lane);
       this.lanes.delete(id);
     }
     for (const object of state.objects) {
@@ -251,8 +250,16 @@ export class GardenTransport {
       this.next += .25;
     }
   }
+  private retireLane(lane: Lane) {
+    // Keep the old route alive only until its brief release has finished.
+    let remaining = lane.voices.size;
+    const disconnect = () => { lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect(); };
+    if (!remaining) disconnect();
+    else for (const node of lane.voices) node.addEventListener("ended", () => { if (--remaining === 0) disconnect(); }, { once: true });
+    this.clearVoices(lane);
+  }
   private clearVoices(lane: Lane) {
-    lane.voices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
+    releaseVoices(lane.voices);
     lane.voices.clear(); lane.layerVoices.free.clear(); lane.layerVoices.ensemble.clear(); lane.activity = [];
   }
   private observeHeard() {
@@ -280,10 +287,9 @@ export class GardenTransport {
     this.life.clear();
     this.generation++; this.running = false; clearInterval(this.timer);
     for (const lane of this.lanes.values()) {
-      this.clearVoices(lane);
-      lane.free.disconnect(); lane.ensemble.disconnect(); lane.gain.disconnect();
+      this.retireLane(lane);
     }
-    this.tapVoices.forEach((node) => { try { node.stop(); } catch { /* ended */ } });
+    releaseVoices(this.tapVoices);
     this.tapVoices.clear();
     this.lanes.clear(); this.next = 0; this.planBeat = -1; this.currentPlan = undefined;
     this.spatialStability = new StableGardenRelations(); this.spatialEffects = [];

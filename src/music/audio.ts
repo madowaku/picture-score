@@ -1,100 +1,97 @@
 import type { Instrument, MusicIR } from "./types";
 import { nearestPitch } from "./score";
+import { envelopeValue, partialEnvelope, voiceTones } from "./tone";
 
 type Context = AudioContext | OfflineAudioContext;
+const releases = new WeakMap<OscillatorNode, () => void>();
+
+/** A short, deterministic stereo room. Generated locally once per audio engine. */
+function roomImpulse(ctx: Context) {
+  const length = Math.ceil(ctx.sampleRate * .45);
+  const buffer = ctx.createBuffer(2, length, ctx.sampleRate);
+  for (let channel = 0; channel < 2; channel++) {
+    const data = buffer.getChannelData(channel);
+    let seed = 7391 + channel * 7919, energy = 0, smooth = 0;
+    const delay = Math.round(ctx.sampleRate * (.017 + channel * .004));
+    for (let i = delay; i < length; i++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      smooth = smooth * .65 + (seed / 0xffffffff * 2 - 1) * .35;
+      const fraction = (i - delay) / (length - delay);
+      data[i] = smooth * Math.exp(-fraction * 7) * (1 - fraction);
+      energy += data[i] ** 2;
+    }
+    const scale = .55 / Math.sqrt(energy);
+    for (let i = delay; i < length; i++) data[i] *= scale;
+  }
+  return buffer;
+}
+
 export function outputBus(ctx: Context) {
   const gain = ctx.createGain();
-  gain.gain.value = 0.62;
+  gain.gain.value = .62;
+  const warmth = ctx.createBiquadFilter();
+  warmth.type = "lowpass"; warmth.frequency.value = 5800; warmth.Q.value = .5;
+  const room = ctx.createConvolver(), wet = ctx.createGain();
+  room.normalize = false; room.buffer = roomImpulse(ctx); wet.gain.value = .2;
   const compressor = ctx.createDynamicsCompressor();
   compressor.threshold.value = -18;
-  compressor.knee.value = 15;
-  compressor.ratio.value = 6;
-  compressor.attack.value = 0.003;
-  compressor.release.value = 0.2;
-  gain.connect(compressor).connect(ctx.destination);
+  compressor.knee.value = 18;
+  compressor.ratio.value = 4;
+  compressor.attack.value = .012;
+  compressor.release.value = .22;
+  gain.connect(warmth).connect(compressor);
+  warmth.connect(room).connect(wet).connect(compressor);
+  compressor.connect(ctx.destination);
   return gain;
 }
 
 /** Small additive voices: no network, samples, accounts or generation API required. */
 export function voice(
-  ctx: Context,
-  bus: AudioNode,
-  pitch: number,
-  at: number,
-  duration: number,
-  velocity: number,
-  instrument: Instrument,
+  ctx: Context, bus: AudioNode, pitch: number, at: number, duration: number,
+  velocity: number, instrument: Instrument,
 ): OscillatorNode[] {
-  const frequency = 440 * 2 ** ((pitch - 69) / 12);
-  const settings: Record<
-    Instrument,
-    {
-      type: OscillatorType;
-      harmonics: number[];
-      gains: number[];
-      attack: number;
-      tail: number;
-    }
-  > = {
-    Piano: {
-      type: "sine",
-      harmonics: [1, 2, 3],
-      gains: [0.7, 0.2, 0.1],
-      attack: 0.006,
-      tail: 0.42,
-    },
-    Bell: {
-      type: "sine",
-      harmonics: [1, 2.756, 5.404],
-      gains: [0.72, 0.2, 0.08],
-      attack: 0.003,
-      tail: 0.85,
-    },
-    Pluck: {
-      type: "triangle",
-      harmonics: [1, 2],
-      gains: [0.86, 0.14],
-      attack: 0.004,
-      tail: 0.16,
-    },
-    Toy: {
-      type: "sine",
-      harmonics: [1, 3, 7],
-      gains: [0.76, 0.19, 0.05],
-      attack: 0.002,
-      tail: 0.23,
-    },
-    "Soft Synth": {
-      type: "triangle",
-      harmonics: [1, 1.003],
-      gains: [0.5, 0.5],
-      attack: 0.045,
-      tail: 0.45,
-    },
-  };
-  const spec = settings[instrument];
-  return spec.harmonics.map((harmonic, i) => {
-    const osc = ctx.createOscillator(),
-      env = ctx.createGain();
-    osc.type = spec.type;
-    osc.frequency.value = frequency * harmonic;
-    const volume = Math.max(0.001, velocity * spec.gains[i] * 0.19);
+  const tone = voiceTones[instrument];
+  return tone.harmonics.map((_, i) => {
+    const osc = ctx.createOscillator(), env = ctx.createGain();
+    const envelope = partialEnvelope(instrument, pitch, velocity, duration, i);
+    osc.type = tone.type;
+    osc.frequency.value = envelope.frequency;
     env.gain.setValueAtTime(0, at);
-    env.gain.linearRampToValueAtTime(volume, at + spec.attack);
-    env.gain.exponentialRampToValueAtTime(
-      Math.max(0.0002, volume * 0.25),
-      at + Math.max(spec.attack + 0.01, duration),
-    );
-    env.gain.exponentialRampToValueAtTime(0.0001, at + duration + spec.tail);
+    for (const point of envelope.points.slice(1)) {
+      if (point.curve === "linear") env.gain.linearRampToValueAtTime(point.value, at + point.time);
+      else env.gain.exponentialRampToValueAtTime(point.value, at + point.time);
+    }
     osc.connect(env).connect(bus);
     osc.start(at);
-    osc.stop(at + duration + spec.tail + 0.03);
-    osc.onended = () => {
-      osc.disconnect();
-      env.disconnect();
-    };
+    const end = at + envelope.end + .005;
+    osc.stop(end);
+    let released = false;
+    releases.set(osc, () => {
+      if (released) return;
+      released = true;
+      const now = ctx.currentTime;
+      if (now >= end) return;
+      env.gain.cancelScheduledValues(now);
+      if (now <= at) {
+        env.gain.setValueAtTime(0, now);
+        osc.stop(now);
+      } else {
+        env.gain.setValueAtTime(envelopeValue(envelope.points, now - at), now);
+        env.gain.linearRampToValueAtTime(0, now + .025);
+        osc.stop(Math.min(end, now + .03));
+      }
+    });
+    osc.onended = () => { releases.delete(osc); osc.disconnect(); env.disconnect(); };
     return osc;
   });
+}
+
+/** Cancel future attacks immediately and let sounding notes leave without a click. */
+export function releaseVoices(nodes: Iterable<OscillatorNode>) {
+  for (const node of nodes) {
+    try { const release = releases.get(node); if (release) release(); else node.stop(); }
+    catch { /* A node may already have ended. */ }
+  }
 }
 
 function events(music: MusicIR) {
@@ -247,7 +244,9 @@ export class AudioEngine {
     music: MusicIR,
     instrument: Instrument,
   ): Promise<{ start: number; seconds: number }> {
+    const generation = ++this.answerGeneration;
     await this.unlock();
+    if (generation !== this.answerGeneration) throw new DOMException("Playback cancelled", "AbortError");
     this.stop();
     const ctx = this.ctx!,
       bus = this.bus!;
@@ -281,35 +280,30 @@ export class AudioEngine {
     this.timer = setInterval(schedule, 25);
     return { start, seconds: music.lengthBeats * secondsPerBeat };
   }
+  dispose() {
+    this.stop();
+    const context = this.ctx;
+    this.ctx = undefined;
+    this.bus = undefined;
+    if (context && context.state !== "closed") void context.close().catch(() => undefined);
+  }
   get currentTime() {
     return this.ctx?.currentTime ?? 0;
   }
   stop() {
     this.answerGeneration++;
     clearInterval(this.timer);
-    this.voices.forEach((node) => {
-      try {
-        node.stop();
-      } catch {
-        /* already ended */
-      }
-    });
+    releaseVoices(this.voices);
     this.voices.clear();
-    this.uiVoices.forEach((node) => {
-      try {
-        node.stop();
-      } catch {
-        /* already ended */
-      }
-    });
+    releaseVoices(this.uiVoices);
     this.uiVoices.clear();
   }
 }
 
-export async function renderAudio(
+export async function renderAudioBuffer(
   music: MusicIR,
   instrument: Instrument,
-): Promise<Blob> {
+): Promise<AudioBuffer> {
   const rate = 44100,
     secondsPerBeat = 60 / music.tempo;
   const ctx = new OfflineAudioContext(
@@ -329,7 +323,12 @@ export async function renderAudio(
       n.support ? "Soft Synth" : instrument,
     ),
   );
-  const audio = await ctx.startRendering();
+  return ctx.startRendering();
+}
+
+export async function renderAudio(music: MusicIR, instrument: Instrument): Promise<Blob> {
+  const audio = await renderAudioBuffer(music, instrument);
+  const rate = audio.sampleRate;
   const buffer = new ArrayBuffer(44 + audio.length * 4),
     view = new DataView(buffer);
   const str = (at: number, s: string) =>
