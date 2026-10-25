@@ -1,0 +1,11 @@
+const fs=require('node:fs');
+const path=require('node:path');
+const root=path.resolve(__dirname,'..');
+const sizes=[16,32,48], images=sizes.map(n=>fs.readFileSync(path.join(root,'public','icons','favicon-'+n+'-v2.png')));
+const header=Buffer.alloc(6+16*sizes.length);header.writeUInt16LE(1,2);header.writeUInt16LE(sizes.length,4);
+let offset=header.length;
+images.forEach((image,i)=>{const entry=6+i*16;header[entry]=sizes[i];header[entry+1]=sizes[i];header.writeUInt16LE(1,entry+4);header.writeUInt16LE(32,entry+6);header.writeUInt32LE(image.length,entry+8);header.writeUInt32LE(offset,entry+12);offset+=image.length;});
+fs.writeFileSync(path.join(root,'public','favicon.ico'),Buffer.concat([header,...images]));
+fs.copyFileSync(path.join(root,'public','favicon.ico'),path.join(root,'public','favicon-v2.ico'));
+fs.copyFileSync(path.join(root,'public','favicon-v2.svg'),path.join(root,'public','favicon.svg'));
+console.log('Packaged 16/32/48px favicon.ico and updated favicon.svg.');
