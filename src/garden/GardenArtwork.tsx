@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties, KeyboardEvent } from 'react';
 import type { MusicalObject } from './gardenState';
 import { useLanguage } from '../i18n/LanguageContext';
-import { strokeColor } from '../wonder/palette';
+import { strokeColor, strokeInk, strokeWidth } from '../wonder/palette';
 import { artworkBounds } from './clearing';
 import { roleMotion } from './life';
 import { LifeAnimations, LifePresentation } from './lifePresentation';
@@ -12,7 +12,7 @@ export const Artwork = memo(function Artwork({object}: {object: MusicalObject}) 
   const box=useMemo(()=>artworkBounds(object),[object.strokeIR]);
   return <svg className="inhabitant-svg" viewBox={[box.x,box.y,box.width,box.height].join(' ')} preserveAspectRatio="none" aria-hidden="true"
     style={{aspectRatio:box.width/box.height*object.project.canvasAspect*420/1000, maxWidth:'100%',maxHeight:110}}>
-    <g className="inhabitant-ink">{object.strokeIR.map(s=><path key={s.id} d={pathFor(s)} />)}</g>
+    <g className="inhabitant-ink">{object.strokeIR.map((s, i)=><path key={s.id} d={pathFor(s)} style={{stroke:strokeInk(s, i),strokeWidth:strokeWidth(s, 2.1)}} />)}</g>
     <path className="life-contour" pathLength="100" />
     <circle className="life-anchor" r="8" />
     <path className="life-spark" d="M-12 0H12M0-12V12M-7-7L7 7M7-7L-7 7" />

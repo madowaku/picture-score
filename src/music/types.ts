@@ -6,6 +6,9 @@ export interface StrokePoint {
   time: number;
 }
 export interface Stroke {
+  /** Optional for compatibility with earlier saved drawings. Width is in display pixels. */
+  color?: string;
+  width?: number;
   id: string;
   points: StrokePoint[];
 }
