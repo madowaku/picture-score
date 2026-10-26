@@ -1325,7 +1325,8 @@ export default function App({ initialSpace = "draw", onSpaceChange, initialProje
         onListen={() => void play()} onSave={async title => {
           stop(); update({ title });
           await onSaveArtwork(structuredClone(projectRef.current));
-        }} onShare={onShare ? () => { stop(); onShare(projectRef.current); } : undefined}
+        }} onPlant={() => { stop(); setFinishOpen(false); setGardenSeed(structuredClone(projectRef.current)); setSpace("garden"); }}
+        onShare={onShare ? () => { stop(); onShare(projectRef.current); } : undefined}
         onLibrary={onOpenLibrary ? () => { stop(); setFinishOpen(false); onOpenLibrary(); } : undefined}
         onClose={() => { stop(); setFinishOpen(false); requestAnimationFrame(() => finishButton.current?.focus()); }} />}
       <input

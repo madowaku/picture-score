@@ -82,17 +82,18 @@ const flows = {
     await s.tap(s.page.locator(".place-garden"), "place in garden");
     await s.tapAt(s.page.locator(".garden-ghost"), "tap to plant");
   },
-  // The celebratory path: Done! → name → save, then find the garden control after closing.
+  // The celebratory path: Done! → name → plant (or, before the Plant button existed,
+  // save, close the dialog and find the garden control).
   done: async (s) => {
     await s.tap(s.page.locator(".home-primary"), "start drawing");
     await s.draw("draw");
     await s.tap(s.page.locator(".finish-button"), "done");
     await s.page.locator("#finish-name").fill("はじめての音"); s.log.typing++;
-    await s.tap(s.page.locator(".finish-dialog button[type=submit]"), "save to sketchbook");
     const plant = s.page.locator(".finish-dialog").getByRole("button", { name: /庭に植える|Plant in garden/ });
     if (await plant.count()) {
       await s.tap(plant, "plant in garden");
     } else {
+      await s.tap(s.page.locator(".finish-dialog button[type=submit]"), "save to sketchbook");
       await s.tap(s.page.locator(".finish-back"), "keep drawing");
       await s.tap(s.page.locator(".place-garden"), "place in garden");
     }
@@ -109,9 +110,11 @@ try {
     try {
       await run(s);
       const waitMs = await s.heard();
+      // Dev server only: confirm whether the drawing was also kept in the sketchbook.
+      const sketchbook = await s.page.evaluate(async () => (await import("/src/library/store.ts")).listArtworks().then((rows) => rows.length));
       const { taps, strokes, typing, scrolls, surfaces, scrolledFor } = s.log;
       results.push({ device, flow: name, actions: taps + strokes + typing + scrolls, taps, strokes, typing, scrolls,
-        screens: surfaces.join(" → "), scrolledFor: scrolledFor.join(", "), soundAfterLastTapMs: waitMs, errors: s.errors.length });
+        screens: surfaces.join(" → "), scrolledFor: scrolledFor.join(", "), soundAfterLastTapMs: waitMs, sketchbook, errors: s.errors.length });
     } catch (error) {
       results.push({ device, flow: name, failed: String(error.message).split("\n")[0], steps: s.log.steps.join(" → ") });
     } finally { await s.close(); }
