@@ -32,5 +32,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify pending Garden save in Chromium
         run: node scripts/qa-garden-navigation.mjs
+      - name: Verify planting into a full Garden in Chromium
+        run: node scripts/qa-garden-full-planting.mjs
       - name: Verify share dialog focus return in Chromium
         run: node scripts/qa-share-focus.mjs

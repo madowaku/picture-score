@@ -4,8 +4,8 @@ import type { Project } from "../music/types";
 import { useLanguage } from "../i18n/LanguageContext";
 import { ArtworkPreview } from "./ArtworkPreview";
 
-export function FinishDialog({ project, updating, playing, onListen, onSave, onPlant, onShare, onLibrary, onClose }: {
-  project: Project; updating: boolean; playing: boolean; onListen: () => void;
+export function FinishDialog({ project, updating, playing, gardenFull = false, onListen, onSave, onPlant, onShare, onLibrary, onClose }: {
+  project: Project; updating: boolean; playing: boolean; gardenFull?: boolean; onListen: () => void;
   onSave: (title: string) => Promise<void>; onPlant?: () => void; onShare?: () => void; onLibrary?: () => void; onClose: () => void;
 }) {
   const { language } = useLanguage();
@@ -45,6 +45,8 @@ export function FinishDialog({ project, updating, playing, onListen, onSave, onP
     <span>{plantOnly ? (ja ? "庭にだけ植える" : "Plant in garden only") : (ja ? "庭に植える" : "Plant in garden")}
       {!saved && !plantOnly && <small>{ja ? "作品帳にも残ります" : "Also kept in your sketchbook"}</small>}</span>
   </button>;
+  const fullNote = onPlant && gardenFull && <p className="creation-hint finish-garden-full">
+    {ja ? "庭は12作品でいっぱいです。植えるときに、休ませる作品を選べます。" : "Your garden is full with 12 artworks. You can choose one to rest when you plant."}</p>;
   return <dialog ref={dialog} className="finish-dialog creation-dialog" aria-labelledby="finish-title"
     onCancel={e => { e.preventDefault(); if (!busy) onClose(); }}>
     <header><div><p className="collection-eyebrow">{ja ? "線から生まれた、ひとつの作品。" : "A little creation, made by you."}</p>
@@ -58,6 +60,7 @@ export function FinishDialog({ project, updating, playing, onListen, onSave, onP
           onChange={e => setTitle(e.target.value)} />
         <p className="creation-hint">{onPlant ? (ja ? "庭に植えると、音の庭で鳴りはじめます。" : "Plant it and it starts playing in your sound garden.") : (ja ? "絵と音を、このブラウザの作品帳に残します。" : "Keep the picture and sound in this browser’s sketchbook.")}</p>
         {plantButton}
+        {fullNote}
         <button className={onPlant ? "collection-secondary" : "collection-primary"} disabled={busy} type="submit">
           {busy ? <LoaderCircle className="spin" size={18} /> : <BookOpen size={18} />}
           {busy ? (ja ? "残しています…" : "Saving…") : updating ? (ja ? "作品帳を更新" : "Update sketchbook") : (ja ? "作品帳に残す" : "Save to sketchbook")}
@@ -65,6 +68,7 @@ export function FinishDialog({ project, updating, playing, onListen, onSave, onP
       </form>}
     {error && <p className="creation-error" role="alert">{error}</p>}
     {saved && plantButton}
+    {saved && fullNote}
     {saved && onShare && <button className={onPlant ? "collection-secondary finish-share" : "collection-primary"} onClick={onShare}><Share2 size={18} />{ja ? "音つきで共有" : "Share with sound"}</button>}
     <div className="finish-actions">
       <button className="collection-secondary" disabled={busy} onClick={onListen}>{playing ? <Square size={16} /> : <Play size={16} />}{playing ? (ja ? "とめる" : "Stop") : (ja ? "きいてみる" : "Listen")}</button>
