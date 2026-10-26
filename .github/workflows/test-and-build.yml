@@ -32,3 +32,5 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Verify pending Garden save in Chromium
         run: node scripts/qa-garden-navigation.mjs
+      - name: Verify share dialog focus return in Chromium
+        run: node scripts/qa-share-focus.mjs

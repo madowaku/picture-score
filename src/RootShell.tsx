@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { BookOpen, Home, Pencil, Sprout } from "lucide-react";
 import App from "./App";
 import { HomeView } from "./home/HomeView";
@@ -69,6 +70,14 @@ export function RootShell() {
     shareOpener.current = document.activeElement as HTMLElement;
     setSharing(structuredClone(project));
   }, []);
+  function closeShare() {
+    // Return focus in the same task the dialog closes, so focus never rests on the page in between.
+    const opener = shareOpener.current;
+    flushSync(() => setSharing(null));
+    const usable = opener?.isConnected && opener.getClientRects().length > 0 && !opener.closest("[inert]");
+    const fallback = document.querySelector<HTMLElement>(".product-bottom-nav [aria-current=page]");
+    (usable ? opener : fallback)?.focus();
+  }
   const syncAppSpace = useCallback((space: AppSpace) => setSurface(space === "garden" ? "garden" : "studio"), []);
   const recent = draft.current.strokes.length ? draft.current : loadRecentProject();
 
@@ -90,9 +99,6 @@ export function RootShell() {
       <button className={surface === "library" ? "active" : ""} aria-current={surface === "library" ? "page" : undefined} onClick={() => setSurface("library")}><BookOpen size={23} /><span>{ja ? "作品帳" : "Sketchbook"}</span></button>
       <button className={surface === "garden" ? "active" : ""} aria-current={surface === "garden" ? "page" : undefined} onClick={() => setSurface("garden")}><Sprout size={24} /><span>{ja ? "ガーデン" : "Garden"}</span></button>
     </nav>
-    {sharing && <ShareDialog project={sharing} onClose={() => {
-      setSharing(null);
-      requestAnimationFrame(() => shareOpener.current?.focus());
-    }} />}
+    {sharing && <ShareDialog project={sharing} onClose={closeShare} />}
   </div>;
 }
