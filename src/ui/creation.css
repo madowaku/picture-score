@@ -29,6 +29,11 @@
 .finish-saved { display:flex; align-items:center; justify-content:center; gap:8px; overflow-wrap:anywhere; }
 .finish-saved svg { flex-shrink:0; }
 .finish-back { display:block; min-height:44px; margin:9px auto 0; }
+.finish-dialog form > button, .finish-plant, .finish-share { width:100%; }
+.finish-dialog form > button + button, .finish-plant + .finish-share { margin-top:9px; }
+.finish-plant { flex-direction:row; }
+.finish-plant span { display:flex; flex-direction:column; align-items:flex-start; line-height:1.25; }
+.finish-plant small { font-size:11px; font-weight:400; opacity:.8; }
 .creation-error { color:#9b4938; line-height:1.7; font-size:13px; }
 @media(max-width:760px),(max-height:520px) and (pointer:coarse) {
   .product-root[data-surface="studio"] .finish-button { padding:7px 9px; font-size:12px; gap:2px; }
