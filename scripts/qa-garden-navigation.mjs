@@ -36,8 +36,10 @@ try {
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto(base, { waitUntil: "domcontentloaded" });
-  const navigation = page.locator(".product-bottom-nav button");
-  await navigation.nth(2).click(); // Garden
+  // Select tabs by label: the shell has HOME / STUDIO / SKETCHBOOK / GARDEN.
+  const tab = (label) => page.locator(".product-bottom-nav button").filter({ hasText: label });
+  const gardenTab = tab(/ガーデン|Garden/), homeTab = tab(/ホーム|Home/);
+  await gardenTab.click();
   await page.locator(".garden-listener").waitFor({ state: "visible" });
   const before = await listenerX(page);
   assert.equal(before, 50, "the empty Garden starts with its listener at 50%");
@@ -56,19 +58,19 @@ try {
   assert.equal(await page.evaluate((key) => localStorage.getItem(key), gardenKey), null,
     "the 250ms debounced writer must still be pending");
 
-  await navigation.nth(0).click(); // HOME unmounts GardenView without pagehide.
+  await homeTab.click(); // HOME unmounts GardenView without pagehide.
   await page.locator('[data-surface="home"]').waitFor();
   const saved = await page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "null"), gardenKey);
   assert.ok(saved, "HOME navigation must flush the pending Garden state");
   assert.ok(Math.abs(saved.listener.x * 100 - moved) < 0.01, "HOME must save the latest listener position");
 
   await page.clock.resume();
-  await navigation.nth(2).click();
+  await gardenTab.click();
   await page.locator(".garden-listener").waitFor({ state: "visible" });
   assert.ok(Math.abs(await listenerX(page) - moved) < 0.01, "reopening Garden must restore the edit");
 
   await page.reload({ waitUntil: "domcontentloaded" });
-  await page.locator(".product-bottom-nav button").nth(2).click();
+  await gardenTab.click();
   await page.locator(".garden-listener").waitFor({ state: "visible" });
   assert.ok(Math.abs(await listenerX(page) - moved) < 0.01, "reload must restore the edit");
   console.log("PASS: pending Garden edit survives HOME, reentry, and reload.");
