@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { artworkBounds, videoSize } from "./painter";
+import { artworkBounds, puchiNoteMarks, videoSize } from "./painter";
 import { supportedVideoType, videoExtension } from "./video";
 import { emptyProject, parseProject } from "../music/project";
 import { exampleStrokes } from "../music/examples";
@@ -30,6 +30,25 @@ describe("share composition", () => {
     expect(supportedVideoType(() => false)).toBeNull();
     expect(videoExtension("video/mp4;codecs=avc1.42E01E,mp4a.40.2")).toBe("mp4");
     expect(videoExtension("video/webm;codecs=vp8,opus")).toBe("webm");
+  });
+});
+
+describe("puchi notes in the share video", () => {
+  it("marks every visual note once, in its stroke's ink, and links the notes that are performed", () => {
+    const strokes = exampleStrokes("cat").map((stroke, index) => index === 0 ? { ...stroke, color: "#2584ac" } : stroke);
+    const project = { ...emptyProject(), strokes };
+    const music = projectMusic(project);
+    const marks = puchiNoteMarks(project, music);
+    expect(marks.map(mark => mark.id)).toEqual(music.drawing.map(note => note.id));
+    const anchors = new Set(music.playNotes.map(note => note.anchorId));
+    for (const mark of marks) {
+      const note = music.drawing.find(item => item.id === mark.id)!;
+      expect(mark).toMatchObject({ x: note.visualPosition.x, y: note.visualPosition.y });
+      expect(!!mark.performed).toBe(anchors.has(mark.id));
+      if (note.sourceStroke === strokes[0].id) expect(mark.color).toBe("#2584ac");
+    }
+    expect(marks.some(mark => mark.performed)).toBe(true);
+    expect(marks.every(mark => mark.x >= 0 && mark.x <= 1000 && mark.y >= 0 && mark.y <= 420)).toBe(true);
   });
 });
 
