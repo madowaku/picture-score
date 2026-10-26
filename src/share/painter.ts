@@ -1,4 +1,4 @@
-import type { MusicIR, Project } from "../music/types";
+import type { MusicIR, PlayNote, Project } from "../music/types";
 import { strokeInk, strokeWidth } from "../wonder/palette";
 
 export type ShareShape = "square" | "portrait";
@@ -9,6 +9,31 @@ export function artworkBounds(aspect: number, width: number, height: number) {
   const availableWidth = width - 96, availableHeight = height - 300;
   const w = Math.min(availableWidth, availableHeight * aspect), h = w / aspect;
   return { x: (width - w) / 2, y: 150 + (availableHeight - h) / 2, width: w, height: h };
+}
+
+/** Every puchi note on the drawing, in drawing space, with the performed note that sounds it (if any). */
+export function puchiNoteMarks(project: Project, music: MusicIR) {
+  const strokes = new Map(project.strokes.map((stroke, index) => [stroke.id, { stroke, index }]));
+  const performedBy = new Map(music.playNotes.map(note => [note.anchorId, note]));
+  return music.drawing.map(note => {
+    const source = strokes.get(note.sourceStroke);
+    return { id: note.id, x: note.visualPosition.x, y: note.visualPosition.y,
+      color: strokeInk(source?.stroke, source?.index ?? 0), performed: performedBy.get(note.id) as PlayNote | undefined };
+  });
+}
+
+// Puchi note in Studio's geometry (head 4.2×2.8 at −25°, stem 3.5,−1→3.5,−14), with `unit` pixels per
+// drawing unit. Drawing notes into the video was ported from Short REC (#55).
+function drawPuchiNote(ctx: CanvasRenderingContext2D, x: number, y: number, unit: number, fill: string, stem: string | null) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(-25 * Math.PI / 180);
+  ctx.fillStyle = fill;
+  ctx.beginPath(); ctx.ellipse(0, 0, 4.2 * unit, 2.8 * unit, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  if (!stem) return;
+  ctx.strokeStyle = stem; ctx.lineWidth = Math.max(1, 1.3 * unit); ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x + 3.5 * unit, y - unit); ctx.lineTo(x + 3.5 * unit, y - 14 * unit); ctx.stroke();
 }
 
 function titleLines(ctx: CanvasRenderingContext2D, title: string, width: number) {
@@ -71,8 +96,17 @@ export function createVideoPainter(canvas: HTMLCanvasElement, project: Project, 
     paper.stroke(path);
   });
   paper.restore();
+  const marks = puchiNoteMarks(project, music);
+  // Studio's note size, enlarged a little because the video shows the drawing smaller than Studio.
+  const noteUnit = bounds.width / 1000 * 1.5;
+  const at = (mark: { x: number; y: number }) => [bounds.x + mark.x / 1000 * bounds.width, bounds.y + mark.y / 420 * bounds.height] as const;
+  // Performed notes read clearly; the remaining notes stay as quiet heads so dense drawings stay legible.
+  for (const mark of marks) {
+    paper.globalAlpha = mark.performed ? .9 : .45;
+    drawPuchiNote(paper, ...at(mark), noteUnit, mark.color, mark.performed ? mark.color : null);
+  }
+  paper.globalAlpha = 1;
   const sourceStrokes = new Map(music.drawing.map(note => [note.id, note.sourceStroke]));
-  const notePositions = new Map(music.drawing.map(note => [note.id, note.visualPosition]));
   return (seconds: number | null) => {
     ctx.drawImage(background, 0, 0);
     if (seconds === null) return;
@@ -92,14 +126,23 @@ export function createVideoPainter(canvas: HTMLCanvasElement, project: Project, 
       ctx.stroke(path);
     });
     ctx.restore();
-    for (const note of active) {
-      const point = notePositions.get(note.anchorId);
-      if (!point) continue;
-      ctx.beginPath();
-      ctx.arc(bounds.x + point.x / 1000 * bounds.width, bounds.y + point.y / 420 * bounds.height, 4.5, 0, Math.PI * 2);
-      ctx.fillStyle = "#ed8a79"; ctx.fill();
-    }
     const fraction = Math.max(0, Math.min(1, beat / music.lengthBeats));
+    // X is time: a soft playhead crosses the drawing as it sounds.
+    const playheadX = bounds.x + bounds.width * fraction;
+    const glow = ctx.createLinearGradient(playheadX - 68, 0, playheadX, 0);
+    glow.addColorStop(0, "rgba(205,85,60,0)"); glow.addColorStop(1, "rgba(205,85,60,.10)");
+    ctx.fillStyle = glow; ctx.fillRect(Math.max(bounds.x, playheadX - 68), bounds.y, Math.min(68, playheadX - bounds.x), bounds.height);
+    ctx.strokeStyle = "#cd553c"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(playheadX, bounds.y); ctx.lineTo(playheadX, bounds.y + bounds.height); ctx.stroke();
+    const sounding = new Set(active.map(note => note.anchorId));
+    for (const mark of marks) {
+      if (!sounding.has(mark.id)) continue;
+      const [x, y] = at(mark);
+      ctx.globalAlpha = .2; ctx.fillStyle = mark.color;
+      ctx.beginPath(); ctx.arc(x, y, 11 * noteUnit, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 1;
+      drawPuchiNote(ctx, x, y, noteUnit, "#f0a45e", "#d66a40");
+    }
     ctx.lineCap = "round"; ctx.lineWidth = 3;
     ctx.beginPath(); ctx.moveTo(230, height - 110); ctx.lineTo(490, height - 110);
     ctx.strokeStyle = "#e2e4d7"; ctx.stroke();
