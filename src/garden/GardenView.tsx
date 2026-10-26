@@ -93,6 +93,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   const [ghost, setGhost] = useState<Position>({ x: 0.5, y: 0.42 });
   const [selected, setSelected] = useState<string | null>(null);
   const field = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
   const gesture = useRef<{ pointer: number; target: string; offset: Position; start: Position; startClient: Position; scrolling: boolean; moved: boolean; startedAt: number; held?: boolean } | null>(null);
   const transport = useRef(new GardenTransport());
   const audition = useRef(new AudioEngine());
@@ -291,6 +292,25 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     setTouchEditing(false);
   }, [active, seed]);
   useEffect(() => {
+    // Arriving with a drawing to plant: keep the planting spot above the bottom navigation.
+    // The Garden header settles after the first frame, so check again once layout is stable.
+    if (!active || !seed) return;
+    let scrolled = false;
+    const reveal = () => {
+      const ghostElement = ghostRef.current;
+      if (scrolled || !ghostElement) return;
+      const rect = ghostElement.getBoundingClientRect();
+      const navTop = document.querySelector(".product-bottom-nav")?.getBoundingClientRect().top ?? innerHeight;
+      if (rect.top >= 0 && rect.bottom <= Math.min(innerHeight, navTop)) return;
+      scrolled = true;
+      const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+      ghostElement.scrollIntoView({ block: "center", behavior: smooth ? "smooth" : "auto" });
+    };
+    const frame = requestAnimationFrame(reveal);
+    const timers = [250, 600].map((delay) => setTimeout(reveal, delay));
+    return () => { cancelAnimationFrame(frame); timers.forEach(clearTimeout); };
+  }, [active, seed]);
+  useEffect(() => {
     const engine = transport.current;
     const visibility = () => { if (document.hidden) resetListening(); };
     document.addEventListener("visibilitychange", visibility);
@@ -476,7 +496,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         life={life.current} arrangement={transport.current.plan?.objectPlans.get(object.id)?.kind ?? 'independent'}
         wonder={(playing ? transport.current.wonder : spatial).find(e => e.objectIds.includes(object.id))?.rule}
         onSelect={setSelected} onKey={stableKey} />)}
-      {pending && <div className="garden-artwork garden-ghost" style={{ left: ghost.x * 100 + "%", top: ghost.y * 100 + "%" }}>
+      {pending && <div ref={ghostRef} className="garden-artwork garden-ghost" style={{ left: ghost.x * 100 + "%", top: ghost.y * 100 + "%" }}>
         <span className="artwork-drawing" style={{ aspectRatio: pending.project.canvasAspect, width: `min(100%, ${pending.project.canvasAspect * 90}px)` }}><Artwork object={pending} /></span><small>{t("ここに、ひとつの音。")}</small></div>}
       <div className="listener-trail" aria-hidden="true">{listenerTrail.map((position, index) => <i key={index} style={{ left: position.x * 100 + "%", top: position.y * 100 + "%", opacity: (index + 1) / listenerTrail.length * .28 }} />)}</div>
       <button className={`garden-listener ${playing ? "listening" : ""} ${listenerTrail.length ? "sweeping" : ""}`} data-object="listener" aria-label={t("聴く位置。ドラッグまたは矢印キーで移動")}
