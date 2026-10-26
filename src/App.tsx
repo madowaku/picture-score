@@ -48,6 +48,7 @@ import {
 } from "./music/project";
 import type { Project, Stroke, StrokePoint } from "./music/types";
 import { GardenView } from "./garden/GardenView";
+import { loadGarden, MAX_OBJECTS } from "./garden/gardenState";
 import { LanguageSwitch, useLanguage } from "./i18n/LanguageContext";
 import { tactileTick } from "./ui/feedback";
 import { drawRelations } from "./wonder/drawRelations";
@@ -168,6 +169,8 @@ export default function App({ initialSpace = "draw", onSpaceChange, initialProje
   const [tool, setTool] = useState<"draw" | "erase">("draw");
   const [brush, setBrush] = useState({ color: inkColors[0].value as string, width: 2.8 });
   const [finishOpen, setFinishOpen] = useState(false);
+  // Read once per Done! so the dialog can say up front that planting will need room.
+  const gardenFull = useMemo(() => finishOpen && loadGarden().state.objects.length >= MAX_OBJECTS, [finishOpen]);
   const finishButton = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<Stroke | null>(null);
   const draftRef = useRef<Stroke | null>(null);
@@ -1321,7 +1324,7 @@ export default function App({ initialSpace = "draw", onSpaceChange, initialProje
           {typeof notice === "string" ? t(notice) : t(notice.key, { format: notice.format ?? "", idea: t(notice.idea ?? "").replace(/^[^\p{L}\p{N}]+/u, "") })}
         </div>
       )}
-      {finishOpen && onSaveArtwork && <FinishDialog project={project} updating={!!artworkId} playing={playing || starting}
+      {finishOpen && onSaveArtwork && <FinishDialog project={project} updating={!!artworkId} playing={playing || starting} gardenFull={gardenFull}
         onListen={() => void play()} onSave={async title => {
           stop(); update({ title });
           await onSaveArtwork(structuredClone(projectRef.current));

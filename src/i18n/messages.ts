@@ -466,9 +466,21 @@ export const messages: Record<string, Record<Language, string>> = {
     "ja": "聴く位置。ドラッグまたは矢印キーで移動",
     "en": "Listening position. Drag or use arrow keys to move"
   },
-  "庭は12作品でいっぱいです。配置をキャンセルして作品を選ぶと取り除けます。": {
-    "ja": "庭は12作品でいっぱいです。配置をキャンセルして作品を選ぶと取り除けます。",
-    "en": "Your garden has 12 artworks. Cancel placement, then select an artwork to remove it."
+  "庭は12作品でいっぱいです。休ませる作品をタップして「庭から取り除く」を選ぶと、植えられるようになります。": {
+    "ja": "庭は12作品でいっぱいです。休ませる作品をタップして「庭から取り除く」を選ぶと、植えられるようになります。",
+    "en": "Your garden is full with 12 artworks. Tap one to rest and choose “Remove from garden” to make room."
+  },
+  "空いたところに植えよう。「元に戻す」で休ませた作品を戻せます。": {
+    "ja": "空いたところに植えよう。「元に戻す」で休ませた作品を戻せます。",
+    "en": "Plant it in the free space. Choose “Undo” to bring the rested artwork back."
+  },
+  "庭がいっぱいです。休ませる作品をタップして選ぼう。": {
+    "ja": "庭がいっぱいです。休ませる作品をタップして選ぼう。",
+    "en": "Your garden is full. Tap an artwork to rest."
+  },
+  "元に戻す": {
+    "ja": "元に戻す",
+    "en": "Undo"
   },
   "好きなところにタップして、音を植えよう。": {
     "ja": "好きなところにタップして、音を植えよう。",
