@@ -4,7 +4,7 @@ import { Check, Ear, Move, Pencil, Play, Square, Sprout, X } from "lucide-react"
 import type { Project } from "../music/types";
 import { clamp } from "../music/score";
 import { GARDEN_KEY, loadGarden, makeObject, MAX_OBJECTS } from "./gardenState";
-import type { Position } from "./gardenState";
+import type { MusicalObject, Position } from "./gardenState";
 import { mixGarden } from "./gardenMixer";
 import { GardenTransport } from "./gardenTransport";
 import type { RelationKind } from "./ensemble";
@@ -123,6 +123,18 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   const pending = useMemo(() => seed ? makeObject(seed, { x: 0.5, y: 0.42 }, "pending") : null, [seed]);
   const mix = mixGarden(garden, Math.floor(beat / 16));
   const selectedObject = garden.objects.find((o) => o.id === selected);
+  // A full Garden makes room only when the person picks a work to rest; that removal stays undoable.
+  const full = !!pending && garden.objects.length >= MAX_OBJECTS;
+  const [rested, setRested] = useState<{ object: MusicalObject; index: number } | null>(null);
+  const restedRef = useRef(rested);
+  restedRef.current = rested;
+  const selectionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // The rest action sits below the field; bring it into view when a work is chosen in a full Garden.
+    if (!full || !selected) return;
+    const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+    selectionRef.current?.scrollIntoView({ block: "center", behavior: smooth ? "smooth" : "auto" });
+  }, [full, selected]);
   const curiosity = garden.objects.length === 1
     ? "もうひとつ描いたら、近くに置いてみよう。どんな返事がする？"
     : "ふたつの絵を近づけたら、どんな会話になる？";
@@ -290,6 +302,8 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
       gesture.current = null; setDragging(false); setPressedObject(null);
     }
     setTouchEditing(false);
+    // Leaving or cancelling a placement brings back a work that was rested only to make room.
+    if ((!active || !seed) && restedRef.current) restoreRested();
   }, [active, seed]);
   useEffect(() => {
     // Arriving with a drawing to plant: keep the planting spot above the bottom navigation.
@@ -366,7 +380,8 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     // Let the browser own a swipe until the user explicitly chooses to rearrange.
     if (!scrolling) event.preventDefault();
     const p = position(event);
-    const target = pending ? "pending" : (event.target as Element).closest<HTMLElement>("[data-object]")?.dataset.object ?? "listener";
+    const touched = (event.target as Element).closest<HTMLElement>("[data-object]")?.dataset.object;
+    const target = pending && !(full && touched && touched !== "listener") ? "pending" : touched ?? "listener";
     const current = target === "listener" ? stateRef.current.listener : stateRef.current.objects.find((o) => o.id === target)?.world;
     const isHandle = (event.target as Element).closest("[data-object]");
     setDragging(!scrolling);
@@ -382,7 +397,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
       held.held = true; setPressedObject(null); activateSpotlight(target);
     }, 480);
     setPressedObject(target !== "listener" && target !== "pending" ? target : null);
-    if (pending) setGhost(p);
+    if (target === "pending") setGhost(p);
     else { setSelected(target === "listener" ? null : target); if (!isHandle) moveTarget(target, p); }
   }
   function move(event: ReactPointerEvent) {
@@ -399,10 +414,26 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     const dest = { x: clamp(p.x + drag.offset.x, 0.06, 0.94), y: clamp(p.y + drag.offset.y, 0.08, 0.92) };
     if (drag.target === "pending") setGhost(dest); else moveTarget(drag.target, dest);
   }
+  function removeSelected() {
+    const index = stateRef.current.objects.findIndex((o) => o.id === selected);
+    if (index < 0) return;
+    if (pending) setRested({ object: stateRef.current.objects[index], index });
+    change({ ...stateRef.current, objects: stateRef.current.objects.filter((o) => o.id !== selected) });
+    setSelected(null); gardenUiTone("remove"); tactileTick(6);
+  }
+  function restoreRested() {
+    const item = restedRef.current;
+    setRested(null);
+    if (!item || stateRef.current.objects.length >= MAX_OBJECTS || stateRef.current.objects.some((o) => o.id === item.object.id)) return;
+    const objects = [...stateRef.current.objects];
+    objects.splice(Math.min(item.index, objects.length), 0, item.object);
+    change({ ...stateRef.current, objects });
+  }
   function place(p: Position) {
     if (!seed || stateRef.current.objects.length >= MAX_OBJECTS) return;
     const object = makeObject(seed, p);
     change({ ...stateRef.current, objects: [...stateRef.current.objects, object] });
+    setRested(null);
     setSelected(object.id); setPlacePulse(true); clearTimeout(pulseTimer.current);
     pulseTimer.current = setTimeout(() => { setPlacePulse(false); }, 850);
     tactileTick(9); onSeedPlaced(); void listen();
@@ -417,7 +448,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         // A tap can audition or plant a work; neither a swipe nor a long press changes the garden.
         if (!drag.moved && performance.now() - drag.startedAt < 480) {
           if (drag.target === "pending") place(position(event));
-          else if (drag.target !== "listener") pingArtwork(drag.target);
+          else if (drag.target !== "listener") { pingArtwork(drag.target); if (full) setSelected(drag.target); }
         }
       } else {
         if (drag.target === "pending") place(position(event));
@@ -456,7 +487,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         <i key={n} className={playing && Math.floor(beat) % 4 === n ? "lit" : ""} />)}</span>
     </div>
     <div className="garden-touch-controls">
-      <p>{pending ? t("タップで音を植えます。上下になぞるとスクロールできます。") : touchEditing
+      <p>{pending ? full ? t("庭がいっぱいです。休ませる作品をタップして選ぼう。") : t("タップで音を植えます。上下になぞるとスクロールできます。") : touchEditing
         ? t("絵や耳を動かせます。終わったら「配置をおわる」を押してください。")
         : t("上下になぞってスクロール。絵をタップすると音が鳴ります。")}</p>
       {!pending && <button className="garden-arrange-toggle" aria-pressed={touchEditing} onClick={() => setTouchEditing(value => !value)}>
@@ -503,15 +534,15 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         style={{ left: garden.listener.x * 100 + "%", top: garden.listener.y * 100 + "%" }}
         onKeyDown={(e) => keyboard(e, "listener", garden.listener)}><span className="listener-orb"><Ear size={20} /></span><span className="listener-label">{t("YOU")}</span></button>
     </div>
-    <div className="garden-bottom"><p role="status">{pending ? garden.objects.length >= MAX_OBJECTS ? t("庭は12作品でいっぱいです。配置をキャンセルして作品を選ぶと取り除けます。") : t("好きなところにタップして、音を植えよう。") : <><span className="garden-desktop-hint">{t("耳を動かすと、聴こえる景色が変わる。絵もそのまま動かせます。")}</span><span className="garden-touch-hint">{t(touchEditing ? "絵や耳を動かして、聴こえる景色を変えてみよう。" : "配置を変えるときは「配置を動かす」を押してください。")}</span></>}</p>
-      {pending ? <div className="garden-actions"><button disabled={garden.objects.length >= MAX_OBJECTS} onClick={() => place(ghost)}>{t("ここに置く")}</button><button onClick={onSeedPlaced}><X size={14} />{t("配置をやめる")}</button></div>
+    <div className="garden-bottom"><p role="status">{pending ? full ? t("庭は12作品でいっぱいです。休ませる作品をタップして「庭から取り除く」を選ぶと、植えられるようになります。") : rested ? t("空いたところに植えよう。「元に戻す」で休ませた作品を戻せます。") : t("好きなところにタップして、音を植えよう。") : <><span className="garden-desktop-hint">{t("耳を動かすと、聴こえる景色が変わる。絵もそのまま動かせます。")}</span><span className="garden-touch-hint">{t(touchEditing ? "絵や耳を動かして、聴こえる景色を変えてみよう。" : "配置を変えるときは「配置を動かす」を押してください。")}</span></>}</p>
+      {pending ? <div className="garden-actions"><button disabled={garden.objects.length >= MAX_OBJECTS} onClick={() => place(ghost)}>{t("ここに置く")}</button>{rested && <button onClick={restoreRested}>{t("元に戻す")}</button>}<button onClick={onSeedPlaced}><X size={14} />{t("配置をやめる")}</button></div>
         : <button className="garden-draw" onClick={onDraw}><Pencil size={15} />{t("もうひとつ描く")}</button>}
     </div>
     {touchEditing && !pending && <button className="garden-arrange-done" onClick={() => setTouchEditing(false)}><Check size={17} />{t("配置をおわる")}</button>}
     <WonderHint space="garden" busy={dragging} enabled={active && !pending && garden.objects.length >= 3} />
-    {selectedObject && !pending && <div className="garden-selection"><span>{selectedObject.title} · {t(roleNames[selectedObject.musicalRole])}</span>
+    {selectedObject && (!pending || full) && <div ref={selectionRef} className="garden-selection"><span>{selectedObject.title} · {t(roleNames[selectedObject.musicalRole])}</span>
       <div className="garden-selection-actions"><button className="spotlight-button" onClick={() => activateSpotlight()}>{t("Spotlight")}</button>
-        <button onClick={() => { change({ ...stateRef.current, objects: stateRef.current.objects.filter((o) => o.id !== selected) }); setSelected(null); gardenUiTone("remove"); tactileTick(6); }}>{t("庭から取り除く")}</button></div></div>}
+        <button onClick={removeSelected}>{t("庭から取り除く")}</button></div></div>}
     {selected && leadRelation && relationNames[0] && relationNames[1] && <p className="ensemble-status" role="status">
       {t(relationCopy[leadRelation.kind], { a: relationNames[0].title, b: relationNames[1].title })}
       <span>{t("少し離すと、それぞれの歌に戻る。")}</span>
