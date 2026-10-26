@@ -423,7 +423,6 @@ h1 em {
   letter-spacing: 1.2px;
   color: #a2a398;
   writing-mode: vertical-rl;
-  transform: rotate(180deg);
   pointer-events: none;
 }
 .pitch-hint.high {

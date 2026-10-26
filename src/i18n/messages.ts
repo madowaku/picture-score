@@ -3,6 +3,13 @@ export const LANGUAGE_KEY = "picture-score:language";
 
 // Source copy is the message key; artwork titles and musical IDs never pass through this dictionary.
 export const messages: Record<string, Record<Language, string>> = {
+  "配置を動かす": { ja: "配置を動かす", en: "Move drawings" },
+  "配置をおわる": { ja: "配置をおわる", en: "Finish moving" },
+  "タップで音を植えます。上下になぞるとスクロールできます。": { ja: "タップで音を植えます。上下になぞるとスクロールできます。", en: "Tap to plant your sound. Swipe up or down to scroll." },
+  "絵や耳を動かせます。終わったら「配置をおわる」を押してください。": { ja: "絵や耳を動かせます。終わったら「配置をおわる」を押してください。", en: "Drag drawings or the ear. Choose “Finish moving” when you’re done." },
+  "上下になぞってスクロール。絵をタップすると音が鳴ります。": { ja: "上下になぞってスクロール。絵をタップすると音が鳴ります。", en: "Swipe up or down to scroll. Tap a drawing to hear it." },
+  "絵や耳を動かして、聴こえる景色を変えてみよう。": { ja: "絵や耳を動かして、聴こえる景色を変えてみよう。", en: "Move drawings or the ear to change the sounds around you." },
+  "配置を変えるときは「配置を動かす」を押してください。": { ja: "配置を変えるときは「配置を動かす」を押してください。", en: "Choose “Move drawings” to rearrange your garden." },
   "Your drawings don’t sit there. They live there.": { ja: "描いた絵が、ここで息づく。", en: "Your drawings don’t sit there. They live there." },
   "庭に置く": { ja: "庭に置く", en: "Plant your song" },
   "Every shape hides a musical secret.": { ja: "かたちの中に、音のひみつ。", en: "Every shape hides a musical secret." },
@@ -56,7 +63,7 @@ export const messages: Record<string, Record<Language, string>> = {
     "en": "Unable to save. Please export your project file."
   },
   "このブラウザに保存済み": {
-    "ja": "このブラウザに保存済み",
+    "ja": "描きかけを自動保存済み",
     "en": "Saved in this browser"
   },
   "保存中": {
@@ -256,8 +263,8 @@ export const messages: Record<string, Record<Language, string>> = {
     "en": "Tempo"
   },
   "ブラウザに保存できません。Saveから作品ファイルを書き出してください。": {
-    "ja": "ブラウザに保存できません。Saveから作品ファイルを書き出してください。",
-    "en": "Browser storage is unavailable. Export your project from Save."
+    "ja": "ブラウザに保存できません。「ほかの保存方法」から作品ファイルを書き出してください。",
+    "en": "Browser storage is unavailable. Export your project from More save options."
   },
   "あそびかた": {
     "ja": "あそびかた",
@@ -308,8 +315,8 @@ export const messages: Record<string, Record<Language, string>> = {
     "en": "Adjust Drawing ↔ Music for detail or flow. Move right for fewer notes and smoother phrases."
   },
   "元の線は、ずっとそのまま。作品はこのブラウザに自動保存されます。Saveから絵・音・作品ファイルも持ち帰れます。": {
-    "ja": "元の線は、ずっとそのまま。作品はこのブラウザに自動保存されます。Saveから絵・音・作品ファイルも持ち帰れます。",
-    "en": "Your original lines stay intact. Your work saves automatically in this browser. Use Save to take home a picture, audio, or project file."
+    "ja": "描きかけは自動保存。「できた！」から作品帳に残して、音つきで共有できます。「ほかの保存方法」では絵・音・作品ファイルも持ち帰れます。",
+    "en": "Your draft saves automatically. Choose Done! to keep it in your sketchbook and share with sound. More save options lets you take home a picture, audio, or project file."
   },
   "さあ、描いてみよう": {
     "ja": "さあ、描いてみよう",

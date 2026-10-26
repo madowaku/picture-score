@@ -4,7 +4,7 @@ import { emptyGarden, makeObject } from './gardenState';
 import { emptyProject } from '../music/project';
 import { voice } from '../music/audio';
 import type { GardenLifeBridge, GardenLifeEvent } from './life';
-vi.mock('../music/audio',()=>({outputBus:()=>({}),voice:vi.fn(()=>Array.from({length:3},()=>({addEventListener(){},stop(){}})))}));
+vi.mock('../music/audio',()=>({outputBus:()=>({}),releaseVoices:vi.fn(),voice:vi.fn(()=>Array.from({length:3},()=>({addEventListener(){},stop(){}})))}));
 afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();vi.clearAllMocks();});
 it('observes one audible chord at the audio onset, not one event per oscillator, and stops pending UI work',async()=>{
   vi.useFakeTimers();vi.stubGlobal('document',{hidden:false});

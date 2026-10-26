@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import {
-  ArrowDownToLine,
+  MoreHorizontal,
   ArrowRight,
   AudioLines,
+  BookOpen,
+  Share2,
   Check,
   ChevronDown,
   CircleHelp,
@@ -53,8 +55,11 @@ import { applyDrawWonder } from "./wonder/drawMusic";
 import { rememberWonder } from "./wonder/wonderMemory";
 import { WonderHint } from "./wonder/wonderHints";
 import { WonderDrawLayer } from "./wonder/WonderDrawLayer";
-import { strokeColor } from "./wonder/palette";
+import { strokeInk, strokeWidth, inkColors } from "./wonder/palette";
+import { BrushPicker } from "./ui/BrushPicker";
+import { FinishDialog } from "./library/FinishDialog";
 import { BrandSymbol } from "./brand/BrandLogo";
+import { SoundSettings } from "./ui/SoundSettings";
 
 type HistoryFrame = Pick<Project, "title" | "strokes" | "canvasAspect">;
 const IDEA_SETS = [
@@ -145,15 +150,25 @@ type AppSpace = "draw" | "garden";
 type AppProps = {
   initialSpace?: AppSpace;
   onSpaceChange?: (space: AppSpace) => void;
+  initialProject?: Project;
+  onProjectChange?: (project: Project) => void;
+  artworkId?: string | null;
+  onNewArtwork?: () => void;
+  onSaveArtwork?: (project: Project) => Promise<void>;
+  onShare?: (project: Project) => void;
+  onOpenLibrary?: () => void;
 };
 
-export default function App({ initialSpace = "draw", onSpaceChange }: AppProps = {}) {
+export default function App({ initialSpace = "draw", onSpaceChange, initialProject, onProjectChange, artworkId, onNewArtwork, onSaveArtwork, onShare, onOpenLibrary }: AppProps = {}) {
   const { language, t } = useLanguage();
   const [space, setSpace] = useState<AppSpace>(initialSpace);
   const [gardenSeed, setGardenSeed] = useState<Project | null>(null);
-  const [project, setProject] = useState<Project>(loadProject);
+  const [project, setProject] = useState<Project>(() => initialProject ?? loadProject());
   const projectRef = useRef(project);
   const [tool, setTool] = useState<"draw" | "erase">("draw");
+  const [brush, setBrush] = useState({ color: inkColors[0].value as string, width: 2.8 });
+  const [finishOpen, setFinishOpen] = useState(false);
+  const finishButton = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<Stroke | null>(null);
   const draftRef = useRef<Stroke | null>(null);
   const draftPathRef = useRef<SVGPathElement>(null);
@@ -178,6 +193,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
   const [exportOpen, setExportOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [keeping, setKeeping] = useState(false);
   const [notice, setNotice] = useState<string | { key: string; format?: string; idea?: string }>("");
   const [saved, setSaved] = useState(true);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -203,8 +219,9 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
     const next = { ...projectRef.current, ...patch };
     projectRef.current = next;
     setProject(next);
+    onProjectChange?.(next);
     setSaved(false);
-  }, []);
+  }, [onProjectChange]);
   const remember = useCallback((frame: HistoryFrame) => {
     history.current = [...history.current.slice(-39), frame];
     future.current = [];
@@ -238,18 +255,19 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
     onSpaceChange?.(space);
   }, [space, onSpaceChange]);
 
-  useEffect(() => () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(projectRef.current));
-    } catch {
-      // Autosave errors are already surfaced while Studio is mounted.
-    }
+  useEffect(() => {
+    const flush = () => {
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(projectRef.current)); }
+      catch { /* Autosave errors are surfaced while Studio is mounted. */ }
+    };
+    window.addEventListener("pagehide", flush);
+    return () => { window.removeEventListener("pagehide", flush); flush(); };
   }, []);
   const notes = useMemo(
     () => createVisualNotes(project.strokes, project.magnet),
     [project.strokes, project.magnet],
   );
-  const noteColors = useMemo(() => new Map(project.strokes.map((stroke, index) => [stroke.id, strokeColor(index)])), [project.strokes]);
+  const noteColors = useMemo(() => new Map(project.strokes.map((stroke, index) => [stroke.id, strokeInk(stroke, index)])), [project.strokes]);
   const wonderEffects = useMemo(() => drawRelations(project.strokes), [project.strokes]);
   const music = useMemo(
     () =>
@@ -428,6 +446,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
       };
       animation.current = requestAnimationFrame(frame);
     } catch {
+      if (generation !== playGeneration.current) return;
       stop();
       setNotice("音を開始できませんでした。もう一度PLAYを押してください。");
     }
@@ -438,7 +457,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
       if (space !== "draw") return;
       if (
         (event.target as HTMLElement).matches("input, select, textarea") ||
-        helpOpen ||
+        helpOpen || document.querySelector("dialog[open]") ||
         pointer.current !== null
       )
         return;
@@ -525,7 +544,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
     ));
     // randomUUID is unavailable over plain LAN HTTP on many mobile browsers.
     const stroke = { id: globalThis.crypto?.randomUUID?.() ??
-      "stroke-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2), points: [p] };
+      "stroke-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2), points: [p], color: brush.color, width: brush.width };
     draftRef.current = stroke;
     draftPath.current = pathFor(stroke);
     setDraft({ ...stroke, points: [...stroke.points] });
@@ -648,6 +667,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
   }
   function loadExample(kind: Example) {
     stop();
+    onNewArtwork?.();
     remember({
       title: project.title,
       strokes: project.strokes,
@@ -673,10 +693,23 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
       strokes: project.strokes,
       canvasAspect: project.canvasAspect,
     });
+    onNewArtwork?.();
     update({ strokes: [], title: "Untitled no. 01" });
     engine.current.uiTone("remove");
     setTool("draw");
     setNotice("新しい一枚。Undoで前の絵に戻せます。");
+  }
+  async function keepWork() {
+    if (keeping || !onSaveArtwork) return;
+    setKeeping(true);
+    stop();
+    try {
+      await onSaveArtwork(structuredClone(projectRef.current));
+      setExportOpen(false);
+      setNotice(language === "ja" ? "作品帳に残しました。下の「作品帳」からいつでも開けます。" : "Saved to your sketchbook. Open it anytime from the navigation below.");
+    } catch {
+      setNotice(language === "ja" ? "作品帳に保存できませんでした。作品ファイルを保存してから、空き容量などを確認してください。" : "Couldn’t save to your sketchbook. Download a project file and check available storage.");
+    } finally { setKeeping(false); }
   }
   async function exportWork(kind: "png" | "wav" | "mid" | "json") {
     if (exporting) return;
@@ -758,23 +791,34 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
           >
             <Redo2 size={17} />
           </button>
+          {onSaveArtwork && <button ref={finishButton} className="finish-button" disabled={!project.strokes.length || keeping || exporting}
+            onClick={() => { stop(); setExportOpen(false); setFinishOpen(true); }}><Check size={17} /><span>{language === "ja" ? "できた！" : "Done!"}</span></button>}
           <span className="header-divider" />
           <div ref={exportRef} className="export-wrap">
             <button
               className={`save-button ${exportOpen ? "open" : ""}`}
-              aria-label={t("作品を書き出す")}
+              aria-label={language === "ja" ? "ほかの保存方法" : "More save options"}
+              title={language === "ja" ? "ほかの保存方法" : "More save options"}
               aria-expanded={exportOpen}
               onClick={() => setExportOpen((v) => !v)}
             >
               {exporting ? (
                 <LoaderCircle className="spin" size={16} />
               ) : (
-                <ArrowDownToLine size={16} />
+                <MoreHorizontal size={19} />
               )}
-              <span>Save</span>
+              <span className="sr-only">{language === "ja" ? "ほかの保存方法" : "More save options"}</span>
             </button>
             {exportOpen && (
               <div className="export-menu">
+                {onSaveArtwork && <button disabled={!project.strokes.length || keeping || exporting} onClick={() => void keepWork()}>
+                  {keeping ? <LoaderCircle className="spin" size={17} /> : <BookOpen size={17} />}
+                  <span>{artworkId ? (language === "ja" ? "作品帳を更新" : "Update sketchbook") : (language === "ja" ? "作品帳に残す" : "Save to sketchbook")}<small>{language === "ja" ? "絵と音をまとめて保存" : "Keep your picture and music together"}</small></span>
+                </button>}
+                {onShare && <button aria-label={language === "ja" ? "音つきで共有" : "Share with sound"} disabled={!project.strokes.length || keeping || exporting} onClick={() => { stop(); setExportOpen(false); exportRef.current?.querySelector<HTMLButtonElement>(".save-button")?.focus(); onShare(projectRef.current); }}>
+                  <Share2 size={17} /><span>{language === "ja" ? "音つきで共有" : "Share with sound"}<small>{language === "ja" ? "動画をつくって、届けよう" : "Create a video to share"}</small></span>
+                </button>}
+                <div className="menu-divider" />
                 <div className="menu-eyebrow">{t("KEEP YOUR CREATION")}</div>
                 <button
                   disabled={!notes.length || exporting}
@@ -883,6 +927,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
           aria-label={t("楽譜キャンバス")}
         >
           <div className="paper-heading">
+            <BrushPicker color={brush.color} width={brush.width} onChange={(color, width) => { setBrush({ color, width }); setTool("draw"); }} />
             <div className="paper-label">
               <span className={`status-dot ${playing ? "pulse" : ""}`} />
               <span>
@@ -962,11 +1007,11 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               </g>
               <g className="source-strokes">
                 {project.strokes.map((s, index) => (
-                  <path key={s.id} d={pathFor(s)} data-stroke={s.id} style={{ stroke: strokeColor(index) }} />
+                  <path key={s.id} d={pathFor(s)} data-stroke={s.id} style={{ stroke: strokeInk(s, index), strokeWidth: strokeWidth(s) }} />
                 ))}
               </g>
               <WonderDrawLayer effects={wonderEffects} strokes={project.strokes} recent={wonderStroke} beat={playing ? progress * BEATS : undefined} />
-              {draft && <path ref={draftPathRef} className="draft-stroke" d={pathFor(draft)} />}
+              {draft && <path ref={draftPathRef} className="draft-stroke" d={pathFor(draft)} style={{ stroke: strokeInk(draft, project.strokes.length), strokeWidth: strokeWidth(draft) }} />}
               <g className="score-notes">
                 {notes.map((n) => {
                   const active = activeSources.has(n.id);
@@ -1089,7 +1134,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 onClick={() => setTool("draw")}
               >
                 <Pencil size={17} />
-                <span>DRAW</span>
+                <span>{language === "ja" ? "かく" : "DRAW"}</span>
               </button>
               <button
                 className={tool === "erase" ? "selected" : ""}
@@ -1098,7 +1143,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 onClick={() => setTool("erase")}
               >
                 <Eraser size={17} />
-                <span>ERASE</span>
+                <span>{language === "ja" ? "けす" : "ERASE"}</span>
               </button>
             </div>
             <span className="control-hint">
@@ -1125,7 +1170,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               ) : (
                 <Play size={18} fill="currentColor" />
               )}
-              <span>{playing || starting ? "STOP" : "PLAY"}</span>
+              <span>{language === "ja" ? (playing || starting ? "とめる" : "きく") : (playing || starting ? "STOP" : "PLAY")}</span>
             </button>
             <span className="control-hint">
               {playing ? t("あなたの絵を、演奏中") : t("描いたら、聴いてみよう")}
@@ -1135,6 +1180,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               <Music2 size={14} /> {t("PLACE IN GARDEN")}
             </button>
           </div>
+          <SoundSettings>
           <div className="magnet-control">
             <div className="magnet-title">
               <label htmlFor="magnet">
@@ -1182,8 +1228,6 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
               {t(interpretationHint)}
             </p>
           </div>
-        </section>
-
         <section className="sound-strip" aria-label={t("音色の設定")}>
           <div className="instrument-control">
             <span className="sound-label">
@@ -1254,6 +1298,8 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
             </div>
           </div>
         </section>
+          </SoundSettings>
+        </section>
         {saveFailed && (
           <p className="save-error" role="alert">
             {t("ブラウザに保存できません。Saveから作品ファイルを書き出してください。")}
@@ -1275,6 +1321,13 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
           {typeof notice === "string" ? t(notice) : t(notice.key, { format: notice.format ?? "", idea: t(notice.idea ?? "").replace(/^[^\p{L}\p{N}]+/u, "") })}
         </div>
       )}
+      {finishOpen && onSaveArtwork && <FinishDialog project={project} updating={!!artworkId} playing={playing || starting}
+        onListen={() => void play()} onSave={async title => {
+          stop(); update({ title });
+          await onSaveArtwork(structuredClone(projectRef.current));
+        }} onShare={onShare ? () => { stop(); onShare(projectRef.current); } : undefined}
+        onLibrary={onOpenLibrary ? () => { stop(); setFinishOpen(false); onOpenLibrary(); } : undefined}
+        onClose={() => { stop(); setFinishOpen(false); requestAnimationFrame(() => finishButton.current?.focus()); }} />}
       <input
         type="file"
         ref={fileRef}
@@ -1291,6 +1344,7 @@ export default function App({ initialSpace = "draw", onSpaceChange }: AppProps =
                 "ファイルが大きすぎます。8MB以下の作品を選んでください。",
               );
             const next = parseProject(JSON.parse(await file.text()));
+            onNewArtwork?.();
             stop();
             remember({
               title: projectRef.current.title,

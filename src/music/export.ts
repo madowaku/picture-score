@@ -2,7 +2,7 @@ import type { Instrument, MusicIR, Project, ScoreNote } from "./types";
 import { HEIGHT, WIDTH } from "./score";
 import { translate } from "../i18n/messages";
 import type { Language } from "../i18n/messages";
-import { strokeColor } from "../wonder/palette";
+import { strokeInk, strokeWidth } from "../wonder/palette";
 
 export function download(blob: Blob, title: string, extension: string) {
   const url = URL.createObjectURL(blob),
@@ -162,7 +162,8 @@ export async function pictureFile(
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   project.strokes.forEach((s, index) => {
-    ctx.strokeStyle = strokeColor(index);
+    ctx.strokeStyle = strokeInk(s, index);
+    ctx.lineWidth = strokeWidth(s, 2.4);
     ctx.beginPath();
     s.points.forEach((p, i) =>
       i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y),
@@ -172,7 +173,7 @@ export async function pictureFile(
   });
   ctx.fillStyle = "#b44831";
   notes.forEach((n) => {
-    ctx.fillStyle = ctx.strokeStyle = strokeColor(project.strokes.findIndex(s => s.id === n.sourceStroke));
+    ctx.fillStyle = ctx.strokeStyle = strokeInk(project.strokes.find(s => s.id === n.sourceStroke), project.strokes.findIndex(s => s.id === n.sourceStroke));
     const { x, y } = n.visualPosition;
     ctx.beginPath();
     ctx.ellipse(x, y, 4, 2.8, -0.45, 0, Math.PI * 2);

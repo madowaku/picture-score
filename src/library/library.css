@@ -1,0 +1,80 @@
+/* A shelf of paper drawings, in the same quiet watercolor world as the studio. */
+.library-view { max-width:1100px; margin:auto; padding:56px 42px 150px; color:#536151; }
+.collection-eyebrow { margin:0 0 12px; color:#73836c; font-size:12px; letter-spacing:.12em; }
+.library-heading { display:flex; align-items:center; justify-content:space-between; gap:24px; margin-bottom:34px; }
+html[lang] .library-heading h1 { margin:0 0 12px; font-size:clamp(28px,4vw,40px); font-weight:500; letter-spacing:.04em; }
+.library-heading > div > p:last-child { margin:0; font-size:14px; color:#76806f; }
+.collection-primary,.collection-secondary { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:46px; padding:12px 21px; border-radius:24px; font-size:14px; font-weight:500; }
+.collection-primary { background:#e99181 url('/art/paper-grain.svg'); color:#342e27; border:1px solid #e6a293; box-shadow:0 4px 14px #b7906c16; }
+.collection-primary:hover:not(:disabled) { background-color:#f0a18f; }
+.collection-secondary { background:#fffdf5; border:1px solid #dcded0; color:#52684b; }
+.collection-secondary:hover:not(:disabled) { background:#f1f4e6; }
+.collection-primary small,.collection-secondary small { font-size:10px; }
+.collection-text-button { display:inline-flex; align-items:center; justify-content:center; gap:7px; min-height:44px; padding:7px 10px; color:#526a4e; font-size:12px; }
+.collection-text-button:hover:not(:disabled) { background:#e9efdf75; border-radius:14px; }
+.collection-icon { width:44px; height:44px; flex:0 0 44px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; color:#65745c; }
+.collection-icon:hover { background:#eef0e3; }
+.library-meta { padding:15px 0; border-top:1px solid #e0e3d5; display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:20px; font-size:12px; color:#73816a; }
+.library-meta > span:first-child { display:flex; align-items:center; gap:9px; color:#52654d; }
+.library-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:30px 24px; }
+.artwork-card { min-width:0; background:#fffdf7; border:1px solid #e6e5d8; border-radius:7px 7px 20px 7px; box-shadow:0 5px 15px #6b76550a; overflow:hidden; }
+.artwork-listen { width:100%; position:relative; display:block; padding:0; background:#fbf9ed; border-bottom:1px solid #f0ecdf; }
+.artwork-preview { width:100%; aspect-ratio:4/3; padding:20px; display:flex; align-items:center; justify-content:center; }
+.artwork-preview svg { width:100%; height:100%; overflow:visible; }
+.artwork-play { position:absolute; bottom:12px; right:12px; display:flex; align-items:center; gap:7px; border:1px solid #e1e5d7; border-radius:30px; padding:9px 12px; background:#fffdf5ee; color:#617254; box-shadow:0 2px 8px #6f845a0a; font-size:11px; }
+.artwork-listen.is-playing { background:#edf3e4; }
+.artwork-listen.is-playing .artwork-play { color:#a44855; border-color:#e9c6bf; }
+.artwork-details { padding:12px 16px 4px; }
+.artwork-title { display:flex; align-items:center; gap:6px; }
+.artwork-title h2 { min-width:0; margin:0; flex:1; font-size:16px; line-height:1.6; font-weight:500; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.artwork-title .collection-icon { width:34px; flex-basis:34px; }
+.artwork-date { display:flex; gap:10px; margin:0 0 16px; font-size:11px; color:#78836f; }
+.artwork-actions { display:flex; align-items:center; gap:4px; justify-content:space-between; flex-wrap:wrap; }
+.artwork-actions .collection-secondary { padding:8px 12px; font-size:12px; min-height:42px; }
+.artwork-actions .collection-text-button { padding-inline:4px; font-size:11px; }
+.artwork-tools { display:flex; align-items:center; gap:10px; margin-top:12px; border-top:1px solid #efeee5; }
+.artwork-tools button { display:inline-flex; gap:5px; align-items:center; justify-content:center; font-size:10px; color:#74806c; min-height:44px; padding:6px 0; }
+.artwork-tools button:last-child { margin-left:auto; min-width:34px; }
+.artwork-tools button:hover { color:#a75462; }
+.artwork-rename { display:flex; align-items:center; gap:1px; }
+.artwork-rename input { min-width:0; flex:1; width:100%; border:1px solid #adbda1; background:#fffef9; color:inherit; border-radius:8px; padding:8px; font-size:14px; }
+.artwork-rename .collection-icon { width:30px; flex-basis:30px; }
+.library-empty { text-align:center; padding:60px 20px; }
+.library-empty-mark { position:relative; display:inline-flex; color:#93aa79; padding:20px; }
+.library-empty-mark > span { position:absolute; top:3px; right:0; font-size:30px; color:#e78c7c; transform:rotate(12deg); }
+.library-empty h2 { font-size:21px; font-weight:500; margin:12px 0; }
+.library-empty p { font-size:14px; line-height:2; white-space:pre-line; color:#77806f; margin-bottom:24px; }
+.library-footnote { margin:32px 0 0; font-size:12px; line-height:1.8; color:#74806c; }
+.library-loading { display:flex; justify-content:center; align-items:center; gap:12px; padding:70px 0; font-size:14px; }
+.library-undo { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 18px; background:#edf2e2; border-radius:14px; margin-bottom:22px; font-size:12px; }
+.library-undo > span { overflow-wrap:anywhere; }
+.library-undo button { display:flex; align-items:center; gap:6px; min-height:44px; white-space:nowrap; }
+.collection-error { color:#974a44; padding:12px 16px; border-radius:12px; background:#fbece4; font-size:13px; line-height:1.8; margin:14px 0; overflow-wrap:anywhere; }
+.collection-message { color:#536c4e; font-size:13px; line-height:1.8; padding:10px 0; }
+@media(max-width:1000px) { .library-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:600px) {
+  .library-view { padding:32px 20px 130px; }
+  .library-heading { align-items:flex-start; flex-direction:column; gap:20px; margin-bottom:24px; }
+  .library-heading > .collection-primary { min-height:44px; padding:10px 17px; font-size:13px; }
+  .library-meta { align-items:flex-start; font-size:10px; }
+  .library-grid { grid-template-columns:minmax(0,1fr); gap:24px; }
+  .artwork-preview { aspect-ratio:1.45; padding:25px; }
+  .artwork-details { padding:10px 18px 3px; }
+  .artwork-title h2 { font-size:18px; }
+  .artwork-actions { justify-content:flex-start; gap:18px; }
+  .artwork-actions .collection-text-button { font-size:12px; }
+  .library-empty { padding:32px 0; }
+  .library-empty h2 { font-size:19px; }
+}
+/* Keep save feedback and the longer save menu clear of the fixed navigation. */
+.product-root .toast { bottom:calc(108px + env(safe-area-inset-bottom,0px)); z-index:120; max-width:calc(100vw - 32px); }
+.product-root .export-menu { max-height:calc(100dvh - 150px); overflow-y:auto; overscroll-behavior:contain; }
+.product-root .collection-primary { background-color:#ed9d8e; }
+@media (max-width:760px), (max-height:520px) and (pointer:coarse) {
+  .product-root[data-surface="studio"] .toast { bottom:calc(80px + env(safe-area-inset-bottom,0px)); }
+}
+
+.library-backup { margin:0 0 24px; padding:14px 16px; border:1px solid #e1e4d5; border-radius:16px; background:#fffdf680; }
+.library-backup > div { display:flex; flex-wrap:wrap; gap:4px 12px; }
+.library-backup > small { display:block; font-size:11px; color:#748069; line-height:1.8; margin:3px 8px; }
+.backup-dialog > p { font-size:14px; line-height:1.8; }

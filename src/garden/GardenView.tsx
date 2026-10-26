@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, KeyboardEvent } from "react";
-import { Ear, Pencil, Play, Square, Sprout, X } from "lucide-react";
+import { Check, Ear, Move, Pencil, Play, Square, Sprout, X } from "lucide-react";
 import type { Project } from "../music/types";
 import { clamp } from "../music/score";
 import { GARDEN_KEY, loadGarden, makeObject, MAX_OBJECTS } from "./gardenState";
@@ -39,7 +39,7 @@ const relationCopy: Record<RelationKind, string> = {
 export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   active: boolean; seed: Project | null; onSeedPlaced: () => void; onDraw: () => void;
 }) {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [loaded] = useState(loadGarden);
   const [garden, setGarden] = useState(loaded.state);
   const [loadedGrowth] = useState(() => loadGrowth(loaded.state));
@@ -70,6 +70,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   const [starting, setStarting] = useState(false);
   const [beat, setBeat] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [touchEditing, setTouchEditing] = useState(false);
   const [spatial, setSpatial] = useState<WonderGardenEffect[]>([]);
   const stableSpatial = useRef(new StableGardenRelations());
   const seenSpatial = useRef(new Set<string>());
@@ -92,7 +93,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   const [ghost, setGhost] = useState<Position>({ x: 0.5, y: 0.42 });
   const [selected, setSelected] = useState<string | null>(null);
   const field = useRef<HTMLDivElement>(null);
-  const gesture = useRef<{ pointer: number; target: string; offset: Position; start: Position; moved: boolean; startedAt: number; held?: boolean } | null>(null);
+  const gesture = useRef<{ pointer: number; target: string; offset: Position; start: Position; startClient: Position; scrolling: boolean; moved: boolean; startedAt: number; held?: boolean } | null>(null);
   const transport = useRef(new GardenTransport());
   const audition = useRef(new AudioEngine());
   const life = useRef(new LifePresentation());
@@ -278,8 +279,13 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     return () => { off(); weaveEvidence.current.resetPhrase(); };
   }, []);
   useEffect(() => {
-    if (!active) resetListening();
-  }, [active]);
+    if (!active) {
+      resetListening();
+      clearTimeout(holdTimer.current);
+      gesture.current = null; setDragging(false); setPressedObject(null);
+    }
+    setTouchEditing(false);
+  }, [active, seed]);
   useEffect(() => {
     const engine = transport.current;
     const visibility = () => { if (document.hidden) resetListening(); };
@@ -332,15 +338,18 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   }
   function down(event: ReactPointerEvent) {
     if (gesture.current || (event.pointerType === "mouse" && event.button !== 0)) return;
-    event.preventDefault();
+    const scrolling = event.pointerType === "touch" && !touchEditing;
+    // Let the browser own a swipe until the user explicitly chooses to rearrange.
+    if (!scrolling) event.preventDefault();
     const p = position(event);
     const target = pending ? "pending" : (event.target as Element).closest<HTMLElement>("[data-object]")?.dataset.object ?? "listener";
     const current = target === "listener" ? stateRef.current.listener : stateRef.current.objects.find((o) => o.id === target)?.world;
     const isHandle = (event.target as Element).closest("[data-object]");
-    setDragging(true);
+    setDragging(!scrolling);
     gesture.current = { pointer: event.pointerId, target,
       offset: current && isHandle ? { x: current.x - p.x, y: current.y - p.y } : { x: 0, y: 0 },
-      start: p, moved: false, startedAt: performance.now() };
+      start: p, startClient: { x: event.clientX, y: event.clientY }, scrolling, moved: false, startedAt: performance.now() };
+    if (scrolling) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     clearTimeout(holdTimer.current);
     if (target !== "listener" && target !== "pending") holdTimer.current = setTimeout(() => {
@@ -356,6 +365,10 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     if (pending && !gesture.current && event.pointerType === "mouse") setGhost(position(event));
     const drag = gesture.current;
     if (!drag || drag.pointer !== event.pointerId || drag.held) return;
+    if (drag.scrolling) {
+      if (Math.hypot(event.clientX - drag.startClient.x, event.clientY - drag.startClient.y) > 10) drag.moved = true;
+      return;
+    }
     const p = position(event);
     if (Math.hypot(p.x - drag.start.x, p.y - drag.start.y) > .012) { drag.moved = true; clearTimeout(holdTimer.current); }
     if (!drag.moved && drag.target !== 'pending') return;
@@ -375,10 +388,18 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
     if (!drag || drag.pointer !== event.pointerId) return;
     clearTimeout(holdTimer.current);
     if (!cancelled && !drag.held) {
-      if (drag.target === "pending") place(position(event));
-      else move(event);
-      if (drag.target !== "pending" && drag.target !== "listener" && !drag.moved && performance.now() - drag.startedAt < 480)
-        pingArtwork(drag.target);
+      move(event);
+      if (drag.scrolling) {
+        // A tap can audition or plant a work; neither a swipe nor a long press changes the garden.
+        if (!drag.moved && performance.now() - drag.startedAt < 480) {
+          if (drag.target === "pending") place(position(event));
+          else if (drag.target !== "listener") pingArtwork(drag.target);
+        }
+      } else {
+        if (drag.target === "pending") place(position(event));
+        if (drag.target !== "pending" && drag.target !== "listener" && !drag.moved && performance.now() - drag.startedAt < 480)
+          pingArtwork(drag.target);
+      }
     }
     gesture.current = null;
     setDragging(false);
@@ -397,7 +418,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
   }
   return <section className="garden-view" hidden={!active} aria-label={t("Garden 音の庭")}>
     <div className="garden-intro"><div><p className="eyebrow"><Sprout size={14} /> PICTURE SCORE GARDEN · ALIVE</p>
-      <h1>{t("Give your song ")}<em>{t("a place.")}</em></h1><p className="intro-copy">{t("Your drawings don’t sit there. They live there.")}</p></div>
+      <h1>{language === "ja" ? <>音の<em>庭</em></> : <>Garden of <em>sound.</em></>}</h1><p className="intro-copy">{t("Your drawings don’t sit there. They live there.")}</p></div>
       <span className="garden-count">{garden.objects.length} / {MAX_OBJECTS}<small>{t("sounds growing")}</small></span></div>
     <div className="garden-toolbar">
       <button className="garden-listen" disabled={!garden.objects.length || starting} onClick={() => {
@@ -410,7 +431,15 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
       <span className="garden-clock" aria-label={t("共通の拍")} data-beat={beat.toFixed(2)}>{[0, 1, 2, 3].map((n) =>
         <i key={n} className={playing && Math.floor(beat) % 4 === n ? "lit" : ""} />)}</span>
     </div>
-    <div ref={field} className={`garden-field ${pending ? "placing" : ""} ${placePulse ? "place-pulse" : ""}`} data-testid="garden-field"
+    <div className="garden-touch-controls">
+      <p>{pending ? t("タップで音を植えます。上下になぞるとスクロールできます。") : touchEditing
+        ? t("絵や耳を動かせます。終わったら「配置をおわる」を押してください。")
+        : t("上下になぞってスクロール。絵をタップすると音が鳴ります。")}</p>
+      {!pending && <button className="garden-arrange-toggle" aria-pressed={touchEditing} onClick={() => setTouchEditing(value => !value)}>
+        {touchEditing ? <Check size={17} /> : <Move size={17} />}{t(touchEditing ? "配置をおわる" : "配置を動かす")}
+      </button>}
+    </div>
+    <div ref={field} data-touch-editing={touchEditing} className={`garden-field ${pending ? "placing" : ""} ${placePulse ? "place-pulse" : ""}`} data-testid="garden-field"
       onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={(e) => up(e, true)}
       onLostPointerCapture={(e) => up(e, true)}>
       <svg className="garden-landscape" viewBox="0 0 1000 650" preserveAspectRatio="none" aria-hidden="true">
@@ -450,10 +479,11 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         style={{ left: garden.listener.x * 100 + "%", top: garden.listener.y * 100 + "%" }}
         onKeyDown={(e) => keyboard(e, "listener", garden.listener)}><span className="listener-orb"><Ear size={20} /></span><span className="listener-label">{t("YOU")}</span></button>
     </div>
-    <div className="garden-bottom"><p role="status">{pending ? garden.objects.length >= MAX_OBJECTS ? t("庭は12作品でいっぱいです。配置をキャンセルして作品を選ぶと取り除けます。") : t("好きなところにタップして、音を植えよう。") : t("耳を動かすと、聴こえる景色が変わる。絵もそのまま動かせます。")}</p>
+    <div className="garden-bottom"><p role="status">{pending ? garden.objects.length >= MAX_OBJECTS ? t("庭は12作品でいっぱいです。配置をキャンセルして作品を選ぶと取り除けます。") : t("好きなところにタップして、音を植えよう。") : <><span className="garden-desktop-hint">{t("耳を動かすと、聴こえる景色が変わる。絵もそのまま動かせます。")}</span><span className="garden-touch-hint">{t(touchEditing ? "絵や耳を動かして、聴こえる景色を変えてみよう。" : "配置を変えるときは「配置を動かす」を押してください。")}</span></>}</p>
       {pending ? <div className="garden-actions"><button disabled={garden.objects.length >= MAX_OBJECTS} onClick={() => place(ghost)}>{t("ここに置く")}</button><button onClick={onSeedPlaced}><X size={14} />{t("配置をやめる")}</button></div>
         : <button className="garden-draw" onClick={onDraw}><Pencil size={15} />{t("もうひとつ描く")}</button>}
     </div>
+    {touchEditing && !pending && <button className="garden-arrange-done" onClick={() => setTouchEditing(false)}><Check size={17} />{t("配置をおわる")}</button>}
     <WonderHint space="garden" busy={dragging} enabled={active && !pending && garden.objects.length >= 3} />
     {selectedObject && !pending && <div className="garden-selection"><span>{selectedObject.title} · {t(roleNames[selectedObject.musicalRole])}</span>
       <div className="garden-selection-actions"><button className="spotlight-button" onClick={() => activateSpotlight()}>{t("Spotlight")}</button>

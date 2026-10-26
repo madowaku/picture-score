@@ -2,7 +2,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { GardenTransport } from '../garden/gardenTransport';
 import { emptyGarden, makeObject } from '../garden/gardenState';
 import { emptyProject } from '../music/project';
-vi.mock('../music/audio', () => ({outputBus:()=>({}),voice:()=>[]}));
+vi.mock('../music/audio', () => ({outputBus:()=>({}),releaseVoices:vi.fn(),voice:()=>[]}));
 afterEach(()=>{vi.useRealTimers();vi.unstubAllGlobals();});
 it('enters and dissolves spatial phrases without restarting the running audio clock',async()=>{
   vi.useFakeTimers();vi.stubGlobal('document',{hidden:false});

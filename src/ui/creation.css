@@ -1,0 +1,46 @@
+
+/* Completion and brush choices share the sketchbook's warm paper treatment. */
+.product-app-shell .finish-button { display:flex; align-items:center; justify-content:center; gap:5px; min-height:44px; padding:9px 14px; border-radius:18px; background:#6c8263; color:#fffdf5; font-size:13px; white-space:nowrap; }
+.finish-button:disabled { opacity:.45; }
+.brush-trigger { display:flex; align-items:center; gap:7px; min-height:44px; flex-shrink:0; padding:4px 10px; border:1px solid #d9ded0; border-radius:14px; background:#fffdf5; color:#56634e; font-size:12px; }
+.brush-dot { width:18px; height:18px; border-radius:50%; box-shadow:inset 0 0 0 2px #fff5; }
+.creation-dialog { width:min(460px,calc(100vw - 28px)); max-height:calc(100dvh - 28px); padding:24px; margin:auto; overflow-y:auto; overscroll-behavior:contain; border:1px solid #e3e5d6; border-radius:26px; color:#4e6049; background:#fcfaf0; box-shadow:0 20px 90px #37433038; }
+.creation-dialog::backdrop { background:#303e3955; backdrop-filter:blur(4px); }
+.creation-dialog header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:18px; }
+.creation-dialog h2 { margin:0; font-size:23px; line-height:1.5; font-weight:600; }
+.creation-dialog header .collection-icon { flex:0 0 44px; min-height:44px; }
+.creation-dialog .collection-eyebrow { margin:0 0 5px; font-size:10px; letter-spacing:.02em; }
+.creation-dialog fieldset { border:0; padding:0; margin:20px 0; min-width:0; }
+.creation-dialog legend,.creation-dialog label { display:block; margin-bottom:10px; font-size:13px; font-weight:600; }
+.ink-colors { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; }
+.ink-colors button { display:flex; flex-direction:column; align-items:center; gap:7px; min-height:68px; padding:6px 0; border-radius:14px; border:1px solid transparent; }
+.ink-colors button > span { width:32px; height:32px; display:grid; place-items:center; border-radius:50%; color:white; }
+.ink-colors small { font-size:10px; white-space:nowrap; }
+.ink-colors button[aria-pressed="true"],.ink-widths button[aria-pressed="true"] { background:#eef0e3; border-color:#8c9e7e; }
+.ink-widths { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; }
+.ink-widths button { border:1px solid #dde1d1; border-radius:14px; padding:10px 6px; min-height:70px; display:grid; justify-items:center; gap:7px; font-size:12px; }
+.ink-widths svg { width:60px; height:18px; }
+.creation-hint { font-size:12px; line-height:1.7; margin:10px 0 17px; color:#6e7964; }
+.creation-dialog .collection-primary { width:100%; min-height:46px; justify-content:center; }
+.finish-dialog .artwork-preview { height:180px; border:1px solid #e6e4d6; border-radius:17px; margin-bottom:20px; }
+.finish-dialog input { width:100%; border:1px solid #cbd3bc; border-radius:12px; min-height:46px; background:#fffef8; padding:10px 12px; color:#4e6049; font-size:16px; }
+.finish-actions { display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-top:13px; }
+.finish-actions button { flex:1; display:flex; align-items:center; justify-content:center; gap:6px; min-height:44px; padding:8px; white-space:nowrap; }
+.finish-saved { display:flex; align-items:center; justify-content:center; gap:8px; overflow-wrap:anywhere; }
+.finish-saved svg { flex-shrink:0; }
+.finish-back { display:block; min-height:44px; margin:9px auto 0; }
+.creation-error { color:#9b4938; line-height:1.7; font-size:13px; }
+@media(max-width:760px),(max-height:520px) and (pointer:coarse) {
+  .product-root[data-surface="studio"] .finish-button { padding:7px 9px; font-size:12px; gap:2px; }
+  .product-root[data-surface="studio"] .finish-button svg { display:none; }
+  .product-root[data-surface="studio"] .paper-heading { flex-basis:44px; height:44px; padding-top:0; padding-bottom:0; }
+  .product-root[data-surface="studio"] .paper-label { display:none; }
+  .product-root[data-surface="studio"] .brush-trigger { border:0; background:transparent; padding:0 5px; min-height:44px; }
+}
+@media(max-width:380px) {
+  .creation-dialog { padding:18px; }
+  .creation-dialog h2 { font-size:21px; }
+  .ink-colors { grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+  .finish-dialog .artwork-preview { height:145px; }
+}
+@media(max-height:580px) { .finish-dialog .artwork-preview { height:110px; } }

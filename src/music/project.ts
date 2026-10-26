@@ -66,6 +66,12 @@ export function parseProject(value: unknown): Project {
       )
         throw new Error("描画座標が正しくありません。");
   }
+  for (const stroke of p.strokes) {
+    if (stroke.color !== undefined && (typeof stroke.color !== "string" || !/^#[0-9a-fA-F]{6}$/.test(stroke.color)))
+      throw new Error("線の色が正しくありません。");
+    if (stroke.width !== undefined && (!Number.isFinite(stroke.width) || stroke.width < 1 || stroke.width > 8))
+      throw new Error("線の太さが正しくありません。");
+  }
   return {
     version: 1,
     title: p.title,
