@@ -1,0 +1,54 @@
+name: v0.3 cloud acceptance
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Install pinned browser QA tools
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1 @axe-core/playwright@4.10.2
+          npx playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg fonts-noto-cjk
+      - name: Protect integrated Garden and focus behavior
+        run: |
+          node scripts/qa-garden-navigation.mjs
+          node scripts/qa-garden-full-planting.mjs
+          node scripts/qa-share-focus.mjs
+      - name: Run acceptance on dev and production build
+        run: node scripts/qa-release-acceptance.mjs
+      - name: Probe and decode generated media
+        if: ${{ !cancelled() }}
+        run: node scripts/qa-release-media.mjs
+      - name: Preserve evidence, including failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v03-acceptance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            output/playwright/**/*.json
+            output/playwright/**/*.png
+            output/playwright/**/*.jpg
+            output/playwright/**/*.mp4
+            output/playwright/**/*.webm
+            output/playwright/**/*.wav
+            !output/playwright/release/offline-profile-*/**
+          retention-days: 14
