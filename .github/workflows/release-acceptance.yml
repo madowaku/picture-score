@@ -36,6 +36,9 @@ jobs:
       - name: Run acceptance on dev and production build
         id: browser
         run: node scripts/qa-release-acceptance.mjs
+      - name: Gate confirmed axe WCAG A/AA violations
+        if: ${{ !cancelled() && steps.browser.outcome == 'success' }}
+        run: node scripts/qa-axe-gate.mjs
       - name: Probe and decode generated media
         if: ${{ !cancelled() && steps.browser.outcome != 'skipped' }}
         run: node scripts/qa-release-media.mjs
