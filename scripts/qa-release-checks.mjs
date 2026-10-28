@@ -138,6 +138,7 @@ export async function languageAndAccessibility(browser, out) {
   async function audit(name) {
     const result = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     audits.push({ name, violations: result.violations, incomplete: result.incomplete });
+    await writeFile(`${out}/axe.json`, JSON.stringify(audits, null, 2));
   }
   try {
     await page.goto('http://127.0.0.1:5173/');
@@ -221,7 +222,8 @@ export async function languageAndAccessibility(browser, out) {
     assert.deepEqual(errors, []);
     await writeFile(`${out}/axe.json`, JSON.stringify(audits, null, 2));
     // Findings stay visible in the report; a green browser job is not WCAG certification.
-    return { layouts, languagePreservesWork: true, playbackContinues: true, keyboardModal: true,
+    return { acceptanceStatus: audits.some(a => a.violations.length) ? 'REVIEW' : 'PASS',
+      layouts, languagePreservesWork: true, playbackContinues: true, keyboardModal: true,
       accessibility: audits.map(a => ({ name: a.name, violations: a.violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length })), incomplete: a.incomplete.length })) };
   } finally { await context.close(); }
 }

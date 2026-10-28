@@ -43,7 +43,7 @@ GitHub Actions の成功だけで Issue #65 の Android・SNS・PWA 受入を PA
 npm ci
 npm test
 npm run build
-npm install --no-save --package-lock=false playwright@1.56.1 @axe-core/playwright@4.10.2
+npm install --no-save playwright@1.56.1 @axe-core/playwright@4.10.2
 npx playwright install --with-deps chromium
 # ffmpeg/ffprobe、日本語フォントが必要（CIで導入）
 node scripts/qa-garden-navigation.mjs

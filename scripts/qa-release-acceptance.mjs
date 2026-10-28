@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';
 import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, appendFile } from 'node:fs/promises';
 import { runInThisContext } from 'node:vm';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { chromium } from 'playwright';
@@ -14,6 +14,7 @@ const report = {
   timestamp: new Date().toISOString(), sha: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   os: process.platform, node: process.version, ci: !!process.env.CI, run: process.env.GITHUB_RUN_ID ?? null,
   conditions: 'Desktop Chromium, isolated QA profiles, localhost. No deployment, Android device, OS share sheet or SNS.',
+  releaseDecision: 'HOLD: Android, OS share/SNS and production-origin update are NOT TESTED. Review axe findings separately.',
   checks: [],
 };
 const servers = [];
@@ -40,8 +41,9 @@ async function check(name, fn) {
   const start = Date.now();
   try {
     const detail = await fn();
-    report.checks.push({ name, status: 'PASS', seconds: (Date.now() - start) / 1000, detail });
-    console.log(`PASS ${name}: ${JSON.stringify(detail)}`);
+    const status = detail?.acceptanceStatus ?? 'PASS';
+    report.checks.push({ name, status, seconds: (Date.now() - start) / 1000, detail });
+    console.log(`${status} ${name}: ${JSON.stringify(detail)}`);
   } catch (error) {
     report.checks.push({ name, status: 'FAIL', seconds: (Date.now() - start) / 1000, error: error.stack });
     console.error(`FAIL ${name}: ${error.stack}`);
@@ -83,4 +85,7 @@ try {
   await browser?.close();
   for (const server of servers) await stop(server);
   await writeFile(`${out}/acceptance.json`, JSON.stringify(report, null, 2));
+  if (process.env.GITHUB_STEP_SUMMARY) await appendFile(process.env.GITHUB_STEP_SUMMARY,
+    `## Release acceptance: HOLD\n\n${report.releaseDecision}\n\n| Check | Result |\n| --- | --- |\n` +
+    report.checks.map(c => `| ${c.name} | ${c.status} |`).join('\n') + '\n\nArtifacts contain generated media, axe findings and exact runtime metadata. Green CI means the checks ran, not Android acceptance or WCAG compliance.\n');
 }
