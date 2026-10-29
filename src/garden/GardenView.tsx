@@ -483,7 +483,7 @@ export function GardenView({ active, seed, onSeedPlaced, onDraw }: {
         onChange={(e) => change({ ...stateRef.current, bpm: Number(e.target.value) })}>
         {[72, 88, 104, 120, 140, ...([72, 88, 104, 120, 140].includes(garden.bpm) ? [] : [garden.bpm])].map((bpm) => <option key={bpm}>{bpm}</option>)}
       </select></label><span className="garden-key">{t("C pentatonic")}</span>
-      <span className="garden-clock" aria-label={t("共通の拍")} data-beat={beat.toFixed(2)}>{[0, 1, 2, 3].map((n) =>
+      <span className="garden-clock" role="img" aria-label={t("共通の拍")} data-beat={beat.toFixed(2)}>{[0, 1, 2, 3].map((n) =>
         <i key={n} className={playing && Math.floor(beat) % 4 === n ? "lit" : ""} />)}</span>
     </div>
     <div className="garden-touch-controls">
