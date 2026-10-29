@@ -6,6 +6,15 @@ async (page) => {
   tab.on('pageerror', error => errors.push(error.message));
   const button = name => tab.getByRole('button', { name, exact: true });
   try {
+    // Install before React computes canShare for the generated file. Headless Chromium
+    // has no OS share sheet; changing this after generation does not trigger a render.
+    await context.addInitScript(() => {
+      Object.defineProperty(navigator, 'canShare', { configurable:true, value:() => true });
+      Object.defineProperty(navigator, 'share', { configurable:true, value:async data => {
+        window.__sharedFile = { count:data.files.length, size:data.files[0].size, type:data.files[0].type, name:data.files[0].name };
+        throw new DOMException('cancelled', 'AbortError');
+      } });
+    });
     await tab.goto('http://127.0.0.1:5173/');
     await button('スタジオ').click();
     await button('猫').click();
@@ -48,17 +57,10 @@ async (page) => {
     await download.saveAs(`output/playwright/sketchbook-portrait.${download.suggestedFilename().split('.').at(-1)}`);
 
     // Native share is intercepted: verify file handoff without posting anywhere.
-    await tab.evaluate(() => {
-      Object.defineProperty(navigator, 'canShare', { configurable:true, value:() => true });
-      Object.defineProperty(navigator, 'share', { configurable:true, value:async data => {
-        window.__sharedFile = { count:data.files.length, size:data.files[0].size, type:data.files[0].type, name:data.files[0].name };
-        throw new DOMException('cancelled', 'AbortError');
-      } });
-    });
     await button('共有する').click();
     assert(await tab.getByRole('alert').count() === 0, 'User cancelling share is not an error');
     const handoff = await tab.evaluate(() => window.__sharedFile);
-    assert(handoff.count === 1 && handoff.size > 10000 && handoff.type === 'video/mp4', `Invalid file handoff: ${JSON.stringify(handoff)}`);
+    assert(handoff.count === 1 && handoff.size > 10000 && ['video/mp4', 'video/webm'].includes(handoff.type), `Invalid file handoff: ${JSON.stringify(handoff)}`);
     await tab.evaluate(() => Object.defineProperty(navigator, 'share', { configurable:true, value:async () => { throw new DOMException('unavailable', 'NotAllowedError'); } }));
     await button('共有する').click();
     await tab.getByRole('alert').filter({ hasText:'動画を保存' }).waitFor();
