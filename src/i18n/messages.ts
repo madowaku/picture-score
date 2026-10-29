@@ -724,6 +724,10 @@ export function translate(language: Language, key: string, values: Record<string
   const text = messages[key]?.[language] ?? key;
   return text.replace(/\{(\w+)\}/g, (match, name: string) => String(values[name] ?? match));
 }
+/** English count with a singular noun for exactly one: "1 stroke", "2 strokes". */
+export function countEn(count: number, noun: string): string {
+  return count + " " + noun + (count === 1 ? "" : "s");
+}
 export function loadLanguage(): Language {
   try { return localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "ja"; }
   catch { return "ja"; }
