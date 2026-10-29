@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Download, FolderOpen, LoaderCircle, X } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { countEn } from "../i18n/messages";
 import { download } from "../music/export";
 import { listArtworks, importSketchbook } from "./store";
 import { backupFile, MAX_BACKUP_BYTES, parseBackup, type SketchbookBackup } from "./backup";
@@ -31,7 +32,7 @@ export function LibraryBackup({ count, onRestore, onOpen }: { count: number; onR
       const result = await importSketchbook(backup);
       if (alive.current) {
         setBackup(null); dialog.current?.close(); opener.current?.focus();
-        setMessage(ja ? result.added + "作品を追加しました。" + result.skipped + "作品は同じ内容のためそのままです。" : "Added " + result.added + " creations. " + result.skipped + " unchanged creations skipped.");
+        setMessage(ja ? result.added + "作品を追加しました。" + result.skipped + "作品は同じ内容のためそのままです。" : "Added " + countEn(result.added, "creation") + ". " + countEn(result.skipped, "unchanged creation") + " skipped.");
         try { await onRestore(); } catch { if (alive.current) setError(ja ? "作品は追加しました。表示を更新できなかったため、作品帳を開き直してください。" : "Creations were added. Reopen the sketchbook to refresh the list."); }
       }
     } catch { if (alive.current) setError(ja ? "読み込めませんでした。空き容量を確認して再度お試しください。今ある作品はそのままです。" : "Couldn’t import. Check storage and try again. Existing works are unchanged."); }
@@ -56,7 +57,7 @@ export function LibraryBackup({ count, onRestore, onOpen }: { count: number; onR
       }} />
     <dialog ref={dialog} className="creation-dialog backup-dialog" aria-labelledby="backup-title" onCancel={e => { e.preventDefault(); close(); }}>
       <header><h2 id="backup-title">{ja ? "作品帳に追加しよう" : "Add to your sketchbook"}</h2><button className="collection-icon" disabled={busy} aria-label={ja ? "読み込みをやめる" : "Cancel import"} onClick={close}><X size={22} /></button></header>
-      <p>{ja ? (backup?.artworks.length ?? 0) + "作品のバックアップです。" : (backup?.artworks.length ?? 0) + " creations in this backup."}</p>
+      <p>{ja ? (backup?.artworks.length ?? 0) + "作品のバックアップです。" : countEn(backup?.artworks.length ?? 0, "creation") + " in this backup."}</p>
       <p className="creation-hint">{ja ? "今ある作品は消えません。同じ作品は重ねず、内容が違うものは別の作品として追加します。" : "Existing works stay safe. Identical works are skipped; changed works are added separately."}</p>
       {error && <p role="alert" className="collection-error">{error}</p>}
       <button className="collection-primary" disabled={busy || !backup?.artworks.length} onClick={() => void restore()}>{busy && <LoaderCircle size={18} className="spin" />}{ja ? "作品を追加する" : "Add creations"}</button>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LANGUAGE_KEY, loadLanguage, messages, translate } from "./messages";
+import { countEn, LANGUAGE_KEY, loadLanguage, messages, translate } from "./messages";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -12,6 +12,10 @@ describe("language messages", () => {
       expect(placeholders(message.ja), key).toEqual(placeholders(message.en));
       expect(message.en, key).not.toMatch(/[ぁ-んァ-ン一-龯]/u);
     }
+  });
+
+  it("uses the singular for exactly one in English counts", () => {
+    expect([0, 1, 2].map(n => countEn(n, "creation"))).toEqual(["0 creations", "1 creation", "2 creations"]);
   });
 
   it("interpolates names and values without translating user content", () => {
