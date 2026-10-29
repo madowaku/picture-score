@@ -19,7 +19,7 @@ body:has(.share-dialog[open]) { overflow:hidden; }
 .share-shapes button small { font-size:10px; color:#4d6046; }
 .shape-square,.shape-portrait { border:1.5px solid currentColor; display:inline-block; width:18px; height:18px; border-radius:2px; }
 .shape-portrait { width:12px; height:21px; }
-.share-hint { font-size:12px; color:#6e7b65; line-height:1.9; margin:0 0 22px; }
+.share-hint { font-size:12px; color:#586a51; line-height:1.9; margin:0 0 22px; }
 .share-options > .collection-primary { width:100%; }
 .share-progress { font-size:12px; }
 .share-progress p { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
@@ -27,7 +27,7 @@ body:has(.share-dialog[open]) { overflow:hidden; }
 .share-progress small { display:block; font-size:11px; }
 .share-ready { display:flex; flex-direction:column; gap:10px; }
 .share-ready p { display:flex; align-items:center; gap:7px; font-size:12px; margin:0 0 4px; }
-.share-ready > small { font-size:11px; line-height:1.8; color:#6e7b65; }
+.share-ready > small { font-size:11px; line-height:1.8; color:#586a51; }
 .share-caption { margin-top:24px; padding-top:20px; border-top:1px solid #e1e5d6; }
 .share-caption label { display:block; font-size:12px; margin-bottom:8px; }
 .share-caption textarea { width:100%; resize:vertical; min-height:88px; padding:10px 12px; border:1px solid #e0e3d5; border-radius:10px; font:inherit; font-size:12px; line-height:1.8; color:#65745b; background:#fffdf6; }
