@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { ArrowRight, CircleHelp, FileText, Music2, Pencil, Settings, Sprout } from "lucide-react";
 import type { Project, Stroke } from "../music/types";
 import { useLanguage } from "../i18n/LanguageContext";
+import { countEn } from "../i18n/messages";
 import { strokeInk, strokeWidth } from "../wonder/palette";
 import { BrandLogo } from "../brand/BrandLogo";
 import "./home.css";
@@ -141,7 +142,7 @@ export function HomeView({
             </div>
             <div className="recent-meta">
               <strong>{recent.title || (ja ? "名前のない作品" : "Untitled")}</strong>
-              <span>{ja ? `${recent.strokes.length}本の線` : `${recent.strokes.length} strokes`}</span>
+              <span>{ja ? `${recent.strokes.length}本の線` : countEn(recent.strokes.length, "stroke")}</span>
               <small>{ja ? "あなたの小さな曲" : "Your little composition"}</small>
             </div>
             <ArrowRight className="recent-arrow" size={21} />

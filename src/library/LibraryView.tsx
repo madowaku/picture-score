@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BookOpen, Check, Copy, Download, LoaderCircle, Pencil, Play, Plus, Share2, Square, Trash2, Undo2, X } from "lucide-react";
 import { useLanguage } from "../i18n/LanguageContext";
+import { countEn } from "../i18n/messages";
 import type { Project } from "../music/types";
 import { AudioEngine } from "../music/audio";
 import { projectMusic } from "../music/arrangement";
@@ -77,7 +78,7 @@ export function LibraryView({ onOpen, onNew, onShare, onDeleted, onRenamed }: {
       <div><p className="collection-eyebrow">{ja ? "描いた日も、鳴った音も。" : "Little drawings. Lasting melodies."}</p><h1>{ja ? "わたしの作品帳" : "My sketchbook"}</h1><p>{ja ? "お気に入りをひらいて、また聴こう。" : "Open a favorite. Hear it come to life again."}</p></div>
       <button className="collection-primary" onClick={() => { stop(); onNew(); }}><Plus size={20} />{ja ? "新しく描く" : "New drawing"}</button>
     </header>
-    <div className="library-meta"><span><BookOpen size={17} />{ja ? `${items.length} 作品` : `${items.length} creations`}</span><span>{ja ? "この端末のブラウザに保存" : "Saved in this browser on this device"}</span></div>
+    <div className="library-meta"><span><BookOpen size={17} />{ja ? `${items.length} 作品` : countEn(items.length, "creation")}</span><span>{ja ? "この端末のブラウザに保存" : "Saved in this browser on this device"}</span></div>
     <LibraryBackup count={items.length} onRestore={reload} onOpen={stop} />
     {error && <div className="collection-error" role="alert">{error}<button className="collection-text-button" disabled={busy} onClick={() => void perform(async () => undefined)}>{ja ? "再読み込み" : "Retry"}</button></div>}
     {message && <p className="collection-message" role="status">{message}</p>}
@@ -98,7 +99,7 @@ export function LibraryView({ onOpen, onNew, onShare, onDeleted, onRenamed }: {
             <button className="collection-icon" disabled={busy || !title.trim()} aria-label={ja ? "名前を保存" : "Save name"}><Check size={18} /></button>
             <button type="button" className="collection-icon" aria-label={ja ? "名前の変更をやめる" : "Cancel rename"} onClick={() => setEditing(null)}><X size={18} /></button>
           </form> : <div className="artwork-title"><h2>{item.project.title}</h2><button className="collection-icon" aria-label={ja ? `${item.project.title}の名前を変える` : `Rename ${item.project.title}`} onClick={() => { setEditing(item.id); setTitle(item.project.title); }}><Pencil size={15} /></button></div>}
-          <p className="artwork-date">{date(item.updatedAt)}<span>·</span>{ja ? `${item.project.strokes.length} 本の線` : `${item.project.strokes.length} strokes`}</p>
+          <p className="artwork-date">{date(item.updatedAt)}<span>·</span>{ja ? `${item.project.strokes.length} 本の線` : countEn(item.project.strokes.length, "stroke")}</p>
           <div className="artwork-actions"><button className="collection-secondary" onClick={() => { stop(); onOpen(item); }}><Pencil size={16} />{ja ? "続きを描く" : "Open"}</button><button className="collection-text-button" onClick={() => { stop(); onShare(item.project); }}><Share2 size={17} />{ja ? "音つきで共有" : "Share with sound"}</button></div>
           <div className="artwork-tools"><button disabled={busy} onClick={() => void perform(async () => { await duplicateArtwork(item, ja ? " のコピー" : " (copy)"); setMessage(ja ? "コピーを作品帳に残しました。" : "Saved a copy to your sketchbook."); })}><Copy size={14} />{ja ? "複製" : "Duplicate"}</button>
             <button onClick={() => download(new Blob([JSON.stringify(item.project, null, 2)], { type: "application/json" }), item.project.title, "json")}><Download size={14} />{ja ? "作品ファイル" : "Project file"}</button>
